@@ -1,5 +1,7 @@
 # Markdown 转 Word 文档工具 (md2doc-plus)
 
+项目源于我们开发的一款基于大模型的报告生成工具。由于需要将Markdown格式的内容导出为Word文档，而市面上缺乏合适的现成工具。
+
 ## 项目简介
 
 md2doc-plus 是一个基于 Java 17 和 Apache POI 的轻量级 Markdown 转 Word 文档工具。它可以将 Markdown 格式的文档转换为格式化的 Word (.docx) 文档，支持文本、表格和图表等多种内容元素。
@@ -77,3 +79,11 @@ public static void main(String[] args) throws Exception {
 转换后的word文档：
 
 ![img2.png](img/img2.png)
+
+## 存在的问题
+
+1. word章节标题样式缺失，无法自动生成目录；
+2. 图表样式缺失，图表显示不全，需手动调整；
+
+## 参考
+https://github.com/bin-tenkuu/java-DocTemplate
