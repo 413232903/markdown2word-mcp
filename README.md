@@ -82,8 +82,9 @@ public static void main(String[] args) throws Exception {
 
 ## 存在的问题
 
-1. word章节标题样式缺失，无法自动生成目录；
-2. 图表样式缺失，图表显示不全，需手动调整；
+~~1. word章节标题样式缺失，无法自动生成目录；（已解决）~~
+
+~~2. 图表样式缺失，图表显示不全，需手动调整；（已解决）~~
 
 ## 参考
 https://github.com/bin-tenkuu/java-DocTemplate
