@@ -157,8 +157,8 @@ public class PoiWordGenerator {
         // 设置表格居中对齐
         table.setTableAlignment(TableRowAlign.CENTER);
         
-        // 设置表格宽度为页面宽度
-        table.setWidth("5000"); // 100% 宽度 (5000 = 100% in word units)
+        // 设置表格宽度为页面宽度,100%表示页面宽度
+        table.setWidth("100%");
 
         // 填充表格数据
         for (int i = 0; i < tableData.size(); i++) {
@@ -175,6 +175,10 @@ public class PoiWordGenerator {
                 // 确保有足够的单元格
                 while (row.getTableCells().size() < rowData.size()) {
                     row.addNewTableCell();
+                }
+                // 设置表头背景色，需要设置首行所有单元格
+                for (int x = 0; x< rowData.size();x++){
+                    row.getCell(x).setColor("B4C6E7");
                 }
             } else {
                 row = table.createRow();
@@ -255,5 +259,3 @@ public class PoiWordGenerator {
         return XDDFDataSourcesFactory.fromArray(column.toArray(new Number[0]));
     }
 }
-
-
