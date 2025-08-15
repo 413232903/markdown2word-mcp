@@ -3,8 +3,11 @@ package cn.daydayup.dev.md2doc.template;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.util.Units;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xwpf.usermodel.*;
+import org.openxmlformats.schemas.drawingml.x2006.chart.CTDLbls;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -19,67 +22,6 @@ import java.util.regex.Pattern;
  * @Version 1.0
  */
 public class DynamicWordDocumentCreator {
-
-    /**
-     * 创建一个完整的Word文档模板，包含动态生成的图表
-     * @param filePath 输出文件路径
-     * @param chartCount 图表数量
-     * @param tableCount 表格数量
-     * @throws IOException IO异常
-     * @throws InvalidFormatException 格式异常
-     */
-    public static void createCompleteTemplate(String filePath, int chartCount, int tableCount)
-            throws IOException, InvalidFormatException {
-        try (XWPFDocument document = new XWPFDocument()) {
-            // 创建标题段落
-            XWPFParagraph titleParagraph = document.createParagraph();
-            titleParagraph.setAlignment(ParagraphAlignment.CENTER);
-            XWPFRun titleRun = titleParagraph.createRun();
-            titleRun.setText("${title}");
-            titleRun.setBold(true);
-            titleRun.setFontSize(20);
-
-            // 添加一个空行
-            document.createParagraph();
-
-            // 为每个图表添加占位段落和实际图表
-            for (int i = 1; i <= chartCount; i++) {
-                // 添加图表标题
-                XWPFParagraph chartTitleParagraph = document.createParagraph();
-                XWPFRun chartTitleRun = chartTitleParagraph.createRun();
-                chartTitleRun.setText("图表 " + i + "：");
-                chartTitleRun.setBold(true);
-
-                // 创建实际的图表对象
-                createChartInDocument(document, "chart" + i);
-
-                // 添加空行
-                document.createParagraph();
-            }
-
-            // 为每个表格添加占位段落
-            for (int i = 1; i <= tableCount; i++) {
-                // 添加表格标题
-                XWPFParagraph tableTitleParagraph = document.createParagraph();
-                XWPFRun tableTitleRun = tableTitleParagraph.createRun();
-                tableTitleRun.setText("表格 " + i + "：");
-                tableTitleRun.setBold(true);
-
-                // 添加表格占位符
-                XWPFParagraph tableParagraph = document.createParagraph();
-                XWPFRun tableRun = tableParagraph.createRun();
-                tableRun.setText("${table" + i + "}");
-
-                // 添加空行
-                document.createParagraph();
-            }
-
-            // 保存文档
-            try (FileOutputStream out = new FileOutputStream(filePath)) {
-                document.write(out);
-            }
-        }
-    }
     
     /**
      * 根据Markdown内容创建更完整的模板
@@ -153,43 +95,11 @@ public class DynamicWordDocumentCreator {
     }
     
     /**
-     * 设置各级标题样式
-     * @param paragraph 标题段落
-     * @param level 标题级别
-     */
-    private static void setHeaderParagraphStyle(XWPFParagraph paragraph, int level) {
-        // 标题不需要首行缩进
-        if (paragraph.getCTP().getPPr() == null) {
-            paragraph.getCTP().addNewPPr();
-        }
-        paragraph.getCTP().getPPr().addNewInd();
-        
-        // 设置行距
-        paragraph.getCTP().getPPr().addNewSpacing().setLineRule(org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO);
-        paragraph.getCTP().getPPr().getSpacing().setLine(BigInteger.valueOf(360));
-        
-        // 设置字体大小（根据标题级别）
-        int fontSize = 16; // 默认H3
-        switch (level) {
-            case 1: fontSize = 22; break; // H1
-            case 2: fontSize = 20; break; // H2
-            case 3: fontSize = 18; break; // H3
-            case 4: fontSize = 16; break; // H4
-            case 5: fontSize = 14; break; // H5
-            case 6: fontSize = 12; break; // H6
-        }
-    }
-    
-    /**
      * 解析Markdown内容并创建Word文档结构
      * @param document Word文档对象
      * @param markdownContent Markdown内容
      */
     private static void parseAndCreateDocumentStructure(XWPFDocument document, String markdownContent) {
-        // 用于匹配ECharts代码块的正则表达式
-        Pattern echartsPattern = Pattern.compile("```echarts\\s*\\n(.*?)\\n```", Pattern.DOTALL);
-        // 用于匹配表格的正则表达式
-        Pattern tablePattern = Pattern.compile("(\\|[^\\n]*\\|\\s*\\n\\s*\\|[-|\\s]*\\|\\s*\\n(?:\\s*\\|[^\\n]*\\|\\s*\\n?)*)", Pattern.MULTILINE);
         // 用于匹配标题的正则表达式
         Pattern headerPattern = Pattern.compile("^(#{1,6})\\s+(.*)$", Pattern.MULTILINE);
         
@@ -208,7 +118,6 @@ public class DynamicWordDocumentCreator {
                 
                 XWPFParagraph headerParagraph = document.createParagraph();
                 setHeaderStyle(headerParagraph, level);
-                setHeaderParagraphStyle(headerParagraph, level);
                 XWPFRun headerRun = headerParagraph.createRun();
                 headerRun.setText(title);
                 headerRun.setBold(true);
@@ -336,20 +245,6 @@ public class DynamicWordDocumentCreator {
                 break;
         }
     }
-
-    /**
-     * 在文档中创建一个图表
-     * @param document Word文档对象
-     * @param chartTitle 图表标题
-     */
-    private static void createChartInDocument(XWPFDocument document, String chartTitle) throws IOException, InvalidFormatException {
-        // 创建段落来放置图表
-        XWPFParagraph chartParagraph = document.createParagraph();
-        chartParagraph.setAlignment(ParagraphAlignment.CENTER);
-
-        // 创建一个简单的柱状图
-        XWPFChart chart = createSampleChart(document, chartTitle);
-    }
     
     /**
      * 在文档中创建一个图表，根据ECharts配置创建相应类型的图表
@@ -430,8 +325,8 @@ public class DynamicWordDocumentCreator {
                 chartType = firstSeries.path("type").asText("bar");
             }
             
-            // 创建图表对象
-            XWPFChart chart = document.createChart();
+            // 创建图表对象,并设置图表大小
+            XWPFChart chart = document.createChart(15 * Units.EMU_PER_CENTIMETER, 8 * Units.EMU_PER_CENTIMETER);
             chart.setTitleText(chartTitle);
 
             // 根据图表类型创建相应的图表
@@ -525,6 +420,29 @@ public class DynamicWordDocumentCreator {
         }
         
         chart.plot(data);
+
+        // 设置显示数据标签
+        if (!chart.getCTChart().getPlotArea().getBarChartList().isEmpty()) {
+            // 获取柱状图的第一个系列并设置数据标签
+            org.openxmlformats.schemas.drawingml.x2006.chart.CTBarChart ctBarChart =
+                    chart.getCTChart().getPlotArea().getBarChartList().get(0);
+
+            if (!ctBarChart.getSerList().isEmpty()) {
+                for (int i = 0; i < ctBarChart.getSerList().size(); i++) {
+                    org.openxmlformats.schemas.drawingml.x2006.chart.CTBarSer series =
+                            ctBarChart.getSerList().get(i);
+
+                    // 添加数据标签设置
+                    org.openxmlformats.schemas.drawingml.x2006.chart.CTDLbls dLbls = series.addNewDLbls();
+                    dLbls.addNewShowVal().setVal(true);     // 显示数值
+                    dLbls.addNewShowCatName().setVal(false); // 不显示类别名称
+                    dLbls.addNewShowSerName().setVal(false); // 不显示系列名称
+                    dLbls.addNewShowPercent().setVal(false); // 不显示百分比
+                    dLbls.addNewShowLegendKey().setVal(false); // 不显示图例
+                    dLbls.addNewShowBubbleSize().setVal(false); // 不显示气泡大小
+                }
+            }
+        }
     }
     
     /**
@@ -597,6 +515,29 @@ public class DynamicWordDocumentCreator {
         }
         
         chart.plot(data);
+
+        // 设置显示数据标签
+        if (!chart.getCTChart().getPlotArea().getLineChartList().isEmpty()) {
+            // 获取折线图的第一个系列并设置数据标签
+            org.openxmlformats.schemas.drawingml.x2006.chart.CTLineChart ctLineChart =
+                    chart.getCTChart().getPlotArea().getLineChartList().get(0);
+
+            if (!ctLineChart.getSerList().isEmpty()) {
+                for (int i = 0; i < ctLineChart.getSerList().size(); i++) {
+                    org.openxmlformats.schemas.drawingml.x2006.chart.CTLineSer series =
+                            ctLineChart.getSerList().get(i);
+
+                    // 添加数据标签设置
+                    org.openxmlformats.schemas.drawingml.x2006.chart.CTDLbls dLbls = series.addNewDLbls();
+                    dLbls.addNewShowVal().setVal(true);     // 显示数值
+                    dLbls.addNewShowCatName().setVal(false); // 不显示类别名称
+                    dLbls.addNewShowSerName().setVal(false); // 不显示系列名称
+                    dLbls.addNewShowPercent().setVal(false); // 不显示百分比
+                    dLbls.addNewShowLegendKey().setVal(false); // 不显示图例
+                    dLbls.addNewShowBubbleSize().setVal(false); // 不显示气泡大小
+                }
+            }
+        }
     }
     
     /**
@@ -647,5 +588,17 @@ public class DynamicWordDocumentCreator {
         }
         
         chart.plot(data);
+        CTDLbls ctdLbls = chart.getCTChart().getPlotArea().getPieChartArray(0).getSerArray(0).addNewDLbls();
+        ctdLbls.addNewShowVal().setVal(false);
+        ctdLbls.addNewShowLegendKey().setVal(false);
+        //类别名称
+        ctdLbls.addNewShowCatName().setVal(true);
+        //百分比
+        ctdLbls.addNewShowSerName().setVal(false);
+        ctdLbls.addNewShowPercent().setVal(true);
+        //引导线
+        ctdLbls.addNewShowLeaderLines().setVal(true);
+        //分隔符为分行符
+        ctdLbls.setSeparator("\n");
     }
 }
