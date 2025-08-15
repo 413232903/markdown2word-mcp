@@ -74,10 +74,9 @@ MarkdownToWordConverter.convertMarkdownFileToWord(
 
 ```java
 public static void main(String[] args) throws Exception {
-    MarkdownToWordConverter.convertMarkdownFileToWord(
-        "./markdown/未命名.md",
-        "./word/未命名_output.docx"
-    );
+   MarkdownToWordConverter markdownToWordConverter = new MarkdownToWordConverter();
+   markdownToWordConverter.convertMarkdownFileToWord("./markdown/未命名.md",
+           "./word/未命名_output.docx");
 }
 ```
 
