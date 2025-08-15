@@ -10,7 +10,8 @@ package cn.daydayup.dev.md2doc;
 public class Test {
 
     public static void main(String[] args) throws Exception {
-        MarkdownToWordConverter.convertMarkdownFileToWord("./markdown/未命名.md",
+        MarkdownToWordConverter markdownToWordConverter = new MarkdownToWordConverter();
+        markdownToWordConverter.convertMarkdownFileToWord("./markdown/未命名.md",
                 "./word/未命名_output.docx");
     }
 }

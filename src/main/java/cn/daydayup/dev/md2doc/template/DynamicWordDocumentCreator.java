@@ -7,12 +7,16 @@ import org.apache.poi.util.Units;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.drawingml.x2006.chart.CTDLbls;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Stack;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @ClassName DynamicWordDocumentCreator
@@ -22,6 +26,37 @@ import java.util.regex.Pattern;
  * @Version 1.0
  */
 public class DynamicWordDocumentCreator {
+    
+    // 添加标题编号栈和映射
+    private static class HeaderNumbering {
+        private final Stack<Integer> numberStack = new Stack<>();
+        private final Map<Integer, Integer> levelCounters = new HashMap<>();
+        
+        public void enterLevel(int level) {
+            // 重置更深级别的计数器
+            for (int i = level + 1; i <= 6; i++) {
+                levelCounters.put(i, 0);
+            }
+            
+            // 增加当前级别的计数器
+            levelCounters.put(level, levelCounters.getOrDefault(level, 0) + 1);
+            
+            // 更新栈
+            while (numberStack.size() >= level) {
+                numberStack.pop();
+            }
+            numberStack.push(levelCounters.get(level));
+        }
+        
+        public String getNumber() {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < numberStack.size(); i++) {
+                if (i > 0) sb.append(".");
+                sb.append(numberStack.get(i));
+            }
+            return sb.toString();
+        }
+    }
     
     /**
      * 根据Markdown内容创建更完整的模板
@@ -33,6 +68,9 @@ public class DynamicWordDocumentCreator {
     public static void createCompleteTemplateFromMarkdown(String filePath, String markdownContent)
             throws IOException, InvalidFormatException {
         try (XWPFDocument document = new XWPFDocument()) {
+            // 创建标题样式
+            createHeaderStyles(document);
+            
             // 创建标题段落
             XWPFParagraph titleParagraph = document.createParagraph();
             titleParagraph.setAlignment(ParagraphAlignment.CENTER);
@@ -58,7 +96,123 @@ public class DynamicWordDocumentCreator {
             }
         }
     }
-    
+
+    /**
+     * 创建自定义标题样式
+     * @param document Word文档对象
+     */
+    private static void createHeaderStyles(XWPFDocument document) {
+        // 获取文档样式集合
+        XWPFStyles styles = document.getStyles();
+        if (styles == null) {
+            styles = document.createStyles();
+        }
+
+        // 创建标题1样式
+        createHeadingStyle(styles, "标题1", 1, 22, "000000", "宋体");
+
+        // 创建标题2样式
+        createHeadingStyle(styles, "标题2", 2, 20, "000000", "宋体");
+
+        // 创建标题3样式 (修复多余的空格)
+        createHeadingStyle(styles, "标题3", 3, 18, "000000", "宋体");
+
+        // 创建标题4样式
+        createHeadingStyle(styles, "标题4", 4, 16, "000000", "宋体");
+
+        // 创建标题5样式
+        createHeadingStyle(styles, "标题5", 5, 14, "000000", "宋体");
+
+        // 创建标题6样式
+        createHeadingStyle(styles, "标题6", 6, 12, "000000", "宋体");
+    }
+
+
+    /**
+     * 创建标题样式
+     * @param styles 样式集合
+     * @param styleId 样式ID
+     * @param headingLevel 标题级别
+     * @param fontSize 字体大小
+     * @param color 颜色
+     * @param fontName 字体名称
+     */
+    private static void createHeadingStyle(XWPFStyles styles, String styleId, int headingLevel,
+                                           int fontSize, String color, String fontName) {
+        // 创建样式
+        CTStyle ctStyle = CTStyle.Factory.newInstance();
+        ctStyle.setStyleId(styleId);
+
+        CTString styleName = CTString.Factory.newInstance();
+        styleName.setVal(styleId);
+        ctStyle.setName(styleName);
+
+        // 设置样式类型为段落样式
+        ctStyle.setType(STStyleType.PARAGRAPH);
+
+        // 设置样式优先级（数字越小优先级越高）
+        CTDecimalNumber priority = CTDecimalNumber.Factory.newInstance();
+        priority.setVal(BigInteger.valueOf(headingLevel));
+        ctStyle.setUiPriority(priority);
+
+        // 设置样式在格式栏中显示
+        CTOnOff quickFormat = CTOnOff.Factory.newInstance();
+        ctStyle.setQFormat(quickFormat);
+
+        // 设置样式在使用时不会被隐藏
+        CTOnOff unhide = CTOnOff.Factory.newInstance();
+        ctStyle.setUnhideWhenUsed(unhide);
+
+        // 样式定义给定级别的标题（这是关键，确保标题出现在导航窗格中）
+        CTPPrGeneral ppr = CTPPrGeneral.Factory.newInstance();
+        CTDecimalNumber outlineLevel = CTDecimalNumber.Factory.newInstance();
+        outlineLevel.setVal(BigInteger.valueOf(headingLevel - 1)); // Word中0级是最高级
+        ppr.setOutlineLvl(outlineLevel);
+        ctStyle.setPPr(ppr);
+
+        // 设置字体样式
+        CTRPr rpr = CTRPr.Factory.newInstance();
+
+        CTHpsMeasure size = CTHpsMeasure.Factory.newInstance();
+        size.setVal(new BigInteger(String.valueOf(fontSize * 2))); // 半点为单位
+
+        CTHpsMeasure size2 = CTHpsMeasure.Factory.newInstance();
+        size2.setVal(new BigInteger(String.valueOf(fontSize * 2)));
+
+        CTFonts fonts = CTFonts.Factory.newInstance();
+        fonts.setAscii(fontName);
+        fonts.setEastAsia(fontName);
+        fonts.setHAnsi(fontName);
+
+        // 使用POI 5.2.2兼容的方式设置字体
+        CTFonts[] fontsArray = new CTFonts[1];
+        fontsArray[0] = fonts;
+        rpr.setRFontsArray(fontsArray);
+
+        CTHpsMeasure[] szArray = new CTHpsMeasure[1];
+        szArray[0] = size;
+        rpr.setSzArray(szArray);
+
+        CTHpsMeasure[] szCsArray = new CTHpsMeasure[1];
+        szCsArray[0] = size2;
+        rpr.setSzCsArray(szCsArray);
+
+        if (color != null && !color.isEmpty()) {
+            CTColor ctColor = CTColor.Factory.newInstance();
+            ctColor.setVal(color);
+            CTColor[] colorArray = new CTColor[1];
+            colorArray[0] = ctColor;
+            rpr.setColorArray(colorArray);
+        }
+
+        ctStyle.setRPr(rpr);
+
+        XWPFStyle style = new XWPFStyle(ctStyle);
+        style.setType(STStyleType.PARAGRAPH);
+        styles.addStyle(style);
+    }
+
+
     /**
      * 设置默认段落样式 - 小四号宋体，1.5倍行距，首行缩进2字符
      * @param paragraph 段落对象
@@ -68,16 +222,22 @@ public class DynamicWordDocumentCreator {
         if (paragraph.getCTP().getPPr() == null) {
             paragraph.getCTP().addNewPPr();
         }
-        
+
         // 设置1.5倍行距
-        paragraph.getCTP().getPPr().addNewSpacing().setLineRule(org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO);
+        if (paragraph.getCTP().getPPr().getSpacing() == null) {
+            paragraph.getCTP().getPPr().addNewSpacing();
+        }
+        paragraph.getCTP().getPPr().getSpacing().setLineRule(STLineSpacingRule.AUTO);
         paragraph.getCTP().getPPr().getSpacing().setLine(BigInteger.valueOf(360)); // 1.5倍行距
-        
+
         // 设置首行缩进2字符 (约24磅的20分之一 = 24 * 20 = 480)
-        paragraph.getCTP().getPPr().addNewInd().setFirstLineChars(BigInteger.valueOf(200)); // 2字符
+        if (paragraph.getCTP().getPPr().getInd() == null) {
+            paragraph.getCTP().getPPr().addNewInd();
+        }
+        paragraph.getCTP().getPPr().getInd().setFirstLineChars(BigInteger.valueOf(200)); // 2字符
         paragraph.getCTP().getPPr().getInd().setFirstLine(BigInteger.valueOf(480));
     }
-    
+
     /**
      * 设置标题段落样式
      * @param paragraph 标题段落
@@ -87,13 +247,19 @@ public class DynamicWordDocumentCreator {
         if (paragraph.getCTP().getPPr() == null) {
             paragraph.getCTP().addNewPPr();
         }
-        paragraph.getCTP().getPPr().addNewInd();
-        
+        if (paragraph.getCTP().getPPr().getInd() == null) {
+            paragraph.getCTP().getPPr().addNewInd();
+        }
+
         // 设置行距
-        paragraph.getCTP().getPPr().addNewSpacing().setLineRule(org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO);
+        if (paragraph.getCTP().getPPr().getSpacing() == null) {
+            paragraph.getCTP().getPPr().addNewSpacing();
+        }
+        paragraph.getCTP().getPPr().getSpacing().setLineRule(STLineSpacingRule.AUTO);
         paragraph.getCTP().getPPr().getSpacing().setLine(BigInteger.valueOf(360));
     }
-    
+
+
     /**
      * 解析Markdown内容并创建Word文档结构
      * @param document Word文档对象
@@ -107,6 +273,9 @@ public class DynamicWordDocumentCreator {
         int chartIndex = 1;
         int tableIndex = 1;
         
+        // 初始化标题编号器
+        HeaderNumbering headerNumbering = new HeaderNumbering();
+        
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
             
@@ -116,10 +285,14 @@ public class DynamicWordDocumentCreator {
                 int level = headerMatcher.group(1).length();
                 String title = headerMatcher.group(2);
                 
+                // 更新标题编号
+                headerNumbering.enterLevel(level);
+                String headerNumber = headerNumbering.getNumber();
+                
                 XWPFParagraph headerParagraph = document.createParagraph();
                 setHeaderStyle(headerParagraph, level);
                 XWPFRun headerRun = headerParagraph.createRun();
-                headerRun.setText(title);
+                headerRun.setText(headerNumber + " " + title);
                 headerRun.setBold(true);
                 headerRun.setFontFamily("宋体");
                 
@@ -223,25 +396,25 @@ public class DynamicWordDocumentCreator {
     private static void setHeaderStyle(XWPFParagraph paragraph, int level) {
         switch (level) {
             case 1:
-                paragraph.setStyle("Heading1");
+                paragraph.setStyle("标题1");
                 break;
             case 2:
-                paragraph.setStyle("Heading2");
+                paragraph.setStyle("标题2");
                 break;
             case 3:
-                paragraph.setStyle("Heading3");
+                paragraph.setStyle("标题3");
                 break;
             case 4:
-                paragraph.setStyle("Heading4");
+                paragraph.setStyle("标题4");
                 break;
             case 5:
-                paragraph.setStyle("Heading5");
+                paragraph.setStyle("标题5");
                 break;
             case 6:
-                paragraph.setStyle("Heading6");
+                paragraph.setStyle("标题6");
                 break;
             default:
-                paragraph.setStyle("Heading1");
+                paragraph.setStyle("标题1");
                 break;
         }
     }

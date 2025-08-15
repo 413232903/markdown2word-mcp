@@ -7,6 +7,8 @@ import cn.daydayup.dev.md2doc.parse.MarkdownTableParser;
 import cn.daydayup.dev.md2doc.template.DynamicWordDocumentCreator;
 import cn.daydayup.dev.md2doc.template.EChartsToWordConverter;
 import lombok.val;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -23,6 +25,8 @@ import java.util.regex.Pattern;
  */
 public class MarkdownToWordConverter {
 
+    private static final Logger logger = LogManager.getLogger(MarkdownToWordConverter.class);
+
     // 用于匹配ECharts代码块的正则表达式
     private static final Pattern ECHARTS_PATTERN = Pattern.compile(
             "```echarts\\s*\\n(.*?)\\n```",
@@ -32,8 +36,6 @@ public class MarkdownToWordConverter {
     private static final Pattern TABLE_PATTERN = Pattern.compile("(\\|[^\\n]*\\|\\s*\\n\\s*\\|[-|:\\s]*\\|\\s*\\n(?:\\s*\\|[^\\n]*\\|\\s*\\n?)*)", Pattern.MULTILINE);
     // 用于匹配标题的正则表达式
     private static final Pattern HEADER_PATTERN = Pattern.compile("^(#{1,6})\\s+(.*)$", Pattern.MULTILINE);
-    // 用于匹配段落的正则表达式
-    private static final Pattern PARAGRAPH_PATTERN = Pattern.compile("^(?!#|\\|).*?$", Pattern.MULTILINE);
 
     /**
      * 将Markdown文件转换为Word文档
@@ -41,7 +43,7 @@ public class MarkdownToWordConverter {
      * @param outputFile 输出Word文件路径
      * @throws Exception 转换过程中可能抛出的异常
      */
-    public static void convertMarkdownFileToWord(String markdownFile, String outputFile) throws Exception {
+    public void convertMarkdownFileToWord(String markdownFile, String outputFile) throws Exception {
         String markdownContent = new String(Files.readAllBytes(Paths.get(markdownFile)));
         convertMarkdownToWord(markdownContent, outputFile);
     }
@@ -52,7 +54,8 @@ public class MarkdownToWordConverter {
      * @param outputFile 输出Word文件路径
      * @throws Exception 转换过程中可能抛出的异常
      */
-    public static void convertMarkdownToWord(String markdownContent, String outputFile) throws Exception {
+    public void convertMarkdownToWord(String markdownContent, String outputFile) throws Exception {
+        long startTime = System.currentTimeMillis();
         // 创建临时模板文件
         String templateFile = outputFile.replace(".docx", "_template.docx");
 
@@ -79,6 +82,8 @@ public class MarkdownToWordConverter {
 
         // 删除临时模板文件
         new File(templateFile).delete();
+        long endTime = System.currentTimeMillis();
+        logger.info("Markdown文档已成功转换为Word文档: {}，耗时: {}ms", outputFile, (endTime - startTime));
     }
 
 
@@ -87,7 +92,7 @@ public class MarkdownToWordConverter {
      * @param params Word参数对象
      * @param markdownContent Markdown内容
      */
-    private static void processECharts(WordParams params, String markdownContent) throws Exception {
+    private void processECharts(WordParams params, String markdownContent) throws Exception {
         Matcher matcher = ECHARTS_PATTERN.matcher(markdownContent);
         int chartIndex = 1;
 
@@ -106,7 +111,7 @@ public class MarkdownToWordConverter {
      * @param params Word参数对象
      * @param markdownContent Markdown内容
      */
-    private static void processTables(WordParams params, String markdownContent) {
+    private void processTables(WordParams params, String markdownContent) {
         Matcher matcher = TABLE_PATTERN.matcher(markdownContent);
         int tableIndex = 1;
 
@@ -125,7 +130,7 @@ public class MarkdownToWordConverter {
      * @param params Word参数对象
      * @param markdownContent Markdown内容
      */
-    private static void processTextContent(WordParams params, String markdownContent) {
+    private void processTextContent(WordParams params, String markdownContent) {
         // 提取标题作为文档标题
         Matcher headerMatcher = HEADER_PATTERN.matcher(markdownContent);
         if (headerMatcher.find()) {
