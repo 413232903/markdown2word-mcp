@@ -241,6 +241,7 @@ public class DynamicWordDocumentCreator {
                 
                 // 创建图表占位符
                 XWPFParagraph chartTitleParagraph = document.createParagraph();
+                chartTitleParagraph.setAlignment(ParagraphAlignment.CENTER); // 设置居中对齐
                 setDefaultParagraphStyle(chartTitleParagraph); // 图表标题使用默认段落样式
                 XWPFRun chartTitleRun = chartTitleParagraph.createRun();
                 chartTitleRun.setText("图表 " + chartIndex + "：");
@@ -276,6 +277,7 @@ public class DynamicWordDocumentCreator {
                 
                 // 创建表格占位符
                 XWPFParagraph tableTitleParagraph = document.createParagraph();
+                tableTitleParagraph.setAlignment(ParagraphAlignment.CENTER); // 设置居中对齐
                 setDefaultParagraphStyle(tableTitleParagraph); // 表格标题使用默认段落样式
                 XWPFRun tableTitleRun = tableTitleParagraph.createRun();
                 tableTitleRun.setText("表格 " + tableIndex + "：");
@@ -283,6 +285,7 @@ public class DynamicWordDocumentCreator {
                 tableTitleRun.setFontFamily("宋体");
 
                 XWPFParagraph tableParagraph = document.createParagraph();
+                tableParagraph.setAlignment(ParagraphAlignment.CENTER); // 设置居中对齐
                 setDefaultParagraphStyle(tableParagraph);
                 XWPFRun tableRun = tableParagraph.createRun();
                 tableRun.setText("${table" + tableIndex + "}");

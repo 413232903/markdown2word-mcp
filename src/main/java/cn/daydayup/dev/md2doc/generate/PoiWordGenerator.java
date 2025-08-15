@@ -153,6 +153,12 @@ public class PoiWordGenerator {
 
         // 在段落后插入表格
         XWPFTable table = document.insertNewTbl(paragraph.getCTP().newCursor());
+        
+        // 设置表格居中对齐
+        table.setTableAlignment(TableRowAlign.CENTER);
+        
+        // 设置表格宽度为页面宽度
+        table.setWidth("5000"); // 100% 宽度 (5000 = 100% in word units)
 
         // 填充表格数据
         for (int i = 0; i < tableData.size(); i++) {
@@ -182,6 +188,9 @@ public class PoiWordGenerator {
                 XWPFTableCell cell = row.getCell(j);
                 if (cell != null) {
                     cell.setText(rowData.get(j));
+                    
+                    // 设置单元格居中对齐
+                    cell.getParagraphs().get(0).setAlignment(ParagraphAlignment.CENTER);
                 }
             }
         }
