@@ -96,37 +96,32 @@ public class DynamicWordDocumentCreator {
             }
         }
     }
-
+    
     /**
      * 创建自定义标题样式
      * @param document Word文档对象
      */
     private static void createHeaderStyles(XWPFDocument document) {
-        // 获取文档样式集合
-        XWPFStyles styles = document.getStyles();
-        if (styles == null) {
-            styles = document.createStyles();
-        }
-
+        XWPFStyles styles = document.createStyles();
+        
         // 创建标题1样式
-        createHeadingStyle(styles, "标题1", 1, 22, "000000", "宋体");
-
+        createHeadingStyle(styles, "Heading1", 1, 22, "000000", "宋体");
+        
         // 创建标题2样式
-        createHeadingStyle(styles, "标题2", 2, 20, "000000", "宋体");
-
-        // 创建标题3样式 (修复多余的空格)
-        createHeadingStyle(styles, "标题3", 3, 18, "000000", "宋体");
-
+        createHeadingStyle(styles, "Heading2", 2, 20, "000000", "宋体");
+        
+        // 创建标题3样式
+        createHeadingStyle(styles, "Heading3", 3, 18, "000000", "宋体");
+        
         // 创建标题4样式
-        createHeadingStyle(styles, "标题4", 4, 16, "000000", "宋体");
-
+        createHeadingStyle(styles, "Heading4", 4, 16, "000000", "宋体");
+        
         // 创建标题5样式
-        createHeadingStyle(styles, "标题5", 5, 14, "000000", "宋体");
-
+        createHeadingStyle(styles, "Heading5", 5, 14, "000000", "宋体");
+        
         // 创建标题6样式
-        createHeadingStyle(styles, "标题6", 6, 12, "000000", "宋体");
+        createHeadingStyle(styles, "Heading6", 6, 12, "000000", "宋体");
     }
-
 
     /**
      * 创建标题样式
@@ -222,22 +217,16 @@ public class DynamicWordDocumentCreator {
         if (paragraph.getCTP().getPPr() == null) {
             paragraph.getCTP().addNewPPr();
         }
-
+        
         // 设置1.5倍行距
-        if (paragraph.getCTP().getPPr().getSpacing() == null) {
-            paragraph.getCTP().getPPr().addNewSpacing();
-        }
-        paragraph.getCTP().getPPr().getSpacing().setLineRule(STLineSpacingRule.AUTO);
+        paragraph.getCTP().getPPr().addNewSpacing().setLineRule(org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO);
         paragraph.getCTP().getPPr().getSpacing().setLine(BigInteger.valueOf(360)); // 1.5倍行距
-
+        
         // 设置首行缩进2字符 (约24磅的20分之一 = 24 * 20 = 480)
-        if (paragraph.getCTP().getPPr().getInd() == null) {
-            paragraph.getCTP().getPPr().addNewInd();
-        }
-        paragraph.getCTP().getPPr().getInd().setFirstLineChars(BigInteger.valueOf(200)); // 2字符
+        paragraph.getCTP().getPPr().addNewInd().setFirstLineChars(BigInteger.valueOf(200)); // 2字符
         paragraph.getCTP().getPPr().getInd().setFirstLine(BigInteger.valueOf(480));
     }
-
+    
     /**
      * 设置标题段落样式
      * @param paragraph 标题段落
@@ -247,19 +236,13 @@ public class DynamicWordDocumentCreator {
         if (paragraph.getCTP().getPPr() == null) {
             paragraph.getCTP().addNewPPr();
         }
-        if (paragraph.getCTP().getPPr().getInd() == null) {
-            paragraph.getCTP().getPPr().addNewInd();
-        }
-
+        paragraph.getCTP().getPPr().addNewInd();
+        
         // 设置行距
-        if (paragraph.getCTP().getPPr().getSpacing() == null) {
-            paragraph.getCTP().getPPr().addNewSpacing();
-        }
-        paragraph.getCTP().getPPr().getSpacing().setLineRule(STLineSpacingRule.AUTO);
+        paragraph.getCTP().getPPr().addNewSpacing().setLineRule(org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO);
         paragraph.getCTP().getPPr().getSpacing().setLine(BigInteger.valueOf(360));
     }
-
-
+    
     /**
      * 解析Markdown内容并创建Word文档结构
      * @param document Word文档对象
@@ -396,25 +379,25 @@ public class DynamicWordDocumentCreator {
     private static void setHeaderStyle(XWPFParagraph paragraph, int level) {
         switch (level) {
             case 1:
-                paragraph.setStyle("标题1");
+                paragraph.setStyle("Heading1");
                 break;
             case 2:
-                paragraph.setStyle("标题2");
+                paragraph.setStyle("Heading2");
                 break;
             case 3:
-                paragraph.setStyle("标题3");
+                paragraph.setStyle("Heading3");
                 break;
             case 4:
-                paragraph.setStyle("标题4");
+                paragraph.setStyle("Heading4");
                 break;
             case 5:
-                paragraph.setStyle("标题5");
+                paragraph.setStyle("Heading5");
                 break;
             case 6:
-                paragraph.setStyle("标题6");
+                paragraph.setStyle("Heading6");
                 break;
             default:
-                paragraph.setStyle("标题1");
+                paragraph.setStyle("Heading1");
                 break;
         }
     }
