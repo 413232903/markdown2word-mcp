@@ -1,5 +1,6 @@
 package cn.daydayup.dev.md2doc.core.model;
 
+import cn.daydayup.dev.md2doc.core.util.ImageDownloader;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.poi.util.Units;
@@ -34,6 +35,39 @@ public sealed interface WordParam {
         return new Image(ImageIO.read(file));
     }
 
+    /**
+     * 从 URL 或本地路径创建图片参数
+     * 支持自动下载网络图片和读取本地图片
+     *
+     * @param imageSource 图片来源（URL 或本地路径）
+     * @return WordParam.Image 成功时，WordParam.Text 失败时（占位符）
+     */
+    static WordParam image(String imageSource) {
+        try {
+            BufferedImage bufferedImage = ImageDownloader.downloadOrReadImage(imageSource);
+            if (bufferedImage != null) {
+                return new Image(bufferedImage);
+            } else {
+                // 下载/读取失败，返回占位符文本
+                return imagePlaceholder(imageSource, "图片加载失败");
+            }
+        } catch (Exception e) {
+            return imagePlaceholder(imageSource, "图片处理异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 创建图片加载失败的占位符
+     *
+     * @param imageSource 图片来源
+     * @param errorMessage 错误信息
+     * @return WordParam.Text 占位符
+     */
+    static WordParam imagePlaceholder(String imageSource, String errorMessage) {
+        String placeholder = String.format("[图片加载失败: %s]\n原因: %s", imageSource, errorMessage);
+        return new Text(placeholder);
+    }
+
     // 添加表格支持
     static WordParam table(List<List<String>> data) {
         return new Table(data);
@@ -54,8 +88,15 @@ public sealed interface WordParam {
 
         public Image(BufferedImage bufferedImage) throws IOException {
             this.inputStream = toInputStream(bufferedImage);
-            this.width = Units.toEMU(bufferedImage.getWidth());
-            this.height = Units.toEMU(bufferedImage.getHeight());
+
+            // 使用自适应尺寸计算
+            int[] adaptiveSize = ImageDownloader.calculateAdaptiveSize(
+                    bufferedImage.getWidth(),
+                    bufferedImage.getHeight()
+            );
+
+            this.width = Units.toEMU(adaptiveSize[0]);
+            this.height = Units.toEMU(adaptiveSize[1]);
         }
 
         private static InputStream toInputStream(BufferedImage image) throws IOException {

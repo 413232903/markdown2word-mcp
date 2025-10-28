@@ -72,3 +72,4 @@ mvn spring-boot:run
 - 段落文本
 - 表格
 - ECharts 图表代码块 (使用 ```echarts 代码块)
+- 图片 (支持网络 URL 和本地路径)

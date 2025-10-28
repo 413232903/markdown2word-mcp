@@ -1,2 +1,29 @@
 server:
   port: 8080
+
+spring:
+  application:
+    name: md2doc-service
+
+  # MCP Server 配置
+  ai:
+    mcp:
+      server:
+        # 服务器基本信息
+        name: md2doc-mcp-server
+        version: "1.0"
+        instructions: Markdown to Word Document Conversion MCP Server - 提供 Markdown 转换为 Word 文档的 AI 工具服务
+
+        # 服务器类型
+        type: SYNC
+
+        # SSE 端点
+        sse-message-endpoint: /mcp/messages
+
+# 日志配置
+logging:
+  level:
+    cn.daydayup.dev.md2doc: INFO
+    org.springframework.ai.mcp: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

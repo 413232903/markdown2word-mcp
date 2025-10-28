@@ -251,11 +251,15 @@ public class DynamicWordDocumentCreator {
     private static void parseAndCreateDocumentStructure(XWPFDocument document, String markdownContent) {
         // 用于匹配标题的正则表达式
         Pattern headerPattern = Pattern.compile("^(#{1,6})\\s+(.*)$", Pattern.MULTILINE);
-        
+        // 用于匹配图片的正则表达式: ![alt](url)
+        Pattern imagePattern = Pattern.compile("!\\[([^\\]]*)\\]\\(([^)]+)\\)");
+
         String[] lines = markdownContent.split("\n");
         int chartIndex = 1;
+        int mermaidIndex = 1;
         int tableIndex = 1;
-        
+        int imageIndex = 1;
+
         // 初始化标题编号器
         HeaderNumbering headerNumbering = new HeaderNumbering();
         
@@ -303,7 +307,7 @@ public class DynamicWordDocumentCreator {
                     chartCode.append(lines[i]).append("\n");
                     i++;
                 }
-                
+
                 // 创建图表占位符
                 XWPFParagraph chartTitleParagraph = document.createParagraph();
                 chartTitleParagraph.setAlignment(ParagraphAlignment.CENTER); // 设置居中对齐
@@ -324,11 +328,31 @@ public class DynamicWordDocumentCreator {
                     XWPFRun chartRun = chartParagraph.createRun();
                     chartRun.setText("${chart" + chartIndex + "}");
                 }
-                
+
                 chartIndex++;
                 continue;
             }
-            
+
+            // 检查是否为 Mermaid 图表
+            if (line.trim().equals("```mermaid")) {
+                // 查找 Mermaid 代码块的结束位置
+                StringBuilder mermaidCode = new StringBuilder();
+                i++; // 移动到下一行
+                while (i < lines.length && !lines[i].trim().equals("```")) {
+                    mermaidCode.append(lines[i]).append("\n");
+                    i++;
+                }
+
+                // 创建 Mermaid 占位符
+                XWPFParagraph mermaidParagraph = document.createParagraph();
+                setDefaultParagraphStyle(mermaidParagraph);
+                XWPFRun mermaidRun = mermaidParagraph.createRun();
+                mermaidRun.setText("${mermaid" + mermaidIndex + "}");
+
+                mermaidIndex++;
+                continue;
+            }
+
             // 检查是否为表格开始
             if (line.startsWith("|")) {
                 // 收集表格的所有行
@@ -361,12 +385,50 @@ public class DynamicWordDocumentCreator {
             
             // 普通段落
             if (!line.trim().isEmpty()) {
-                XWPFParagraph paragraph = document.createParagraph();
-                setDefaultParagraphStyle(paragraph); // 内容段落使用默认样式
-                XWPFRun run = paragraph.createRun();
-                run.setText(line);
-                run.setFontFamily("宋体");
-                run.setFontSize(12); // 小四号字体
+                // 检查行中是否包含图片
+                Matcher imageMatcher = imagePattern.matcher(line);
+                if (imageMatcher.find()) {
+                    // 处理包含图片的行
+                    String beforeImage = line.substring(0, imageMatcher.start());
+                    String afterImage = line.substring(imageMatcher.end());
+
+                    // 如果图片前有文本，创建段落
+                    if (!beforeImage.trim().isEmpty()) {
+                        XWPFParagraph paragraph = document.createParagraph();
+                        setDefaultParagraphStyle(paragraph);
+                        XWPFRun run = paragraph.createRun();
+                        run.setText(beforeImage);
+                        run.setFontFamily("宋体");
+                        run.setFontSize(12);
+                    }
+
+                    // 创建图片占位符段落
+                    XWPFParagraph imageParagraph = document.createParagraph();
+                    imageParagraph.setAlignment(ParagraphAlignment.CENTER); // 图片居中
+                    setDefaultParagraphStyle(imageParagraph);
+                    XWPFRun imageRun = imageParagraph.createRun();
+                    imageRun.setText("${image" + imageIndex + "}");
+
+                    imageIndex++;
+
+                    // 如果图片后有文本，创建段落
+                    if (!afterImage.trim().isEmpty()) {
+                        XWPFParagraph paragraph = document.createParagraph();
+                        setDefaultParagraphStyle(paragraph);
+                        XWPFRun run = paragraph.createRun();
+                        run.setText(afterImage);
+                        run.setFontFamily("宋体");
+                        run.setFontSize(12);
+                    }
+                } else {
+                    // 普通文本行
+                    XWPFParagraph paragraph = document.createParagraph();
+                    setDefaultParagraphStyle(paragraph); // 内容段落使用默认样式
+                    XWPFRun run = paragraph.createRun();
+                    run.setText(line);
+                    run.setFontFamily("宋体");
+                    run.setFontSize(12); // 小四号字体
+                }
             }
         }
     }
@@ -409,15 +471,11 @@ public class DynamicWordDocumentCreator {
      * @param echartsConfig ECharts配置
      */
     private static void createChartInDocument(XWPFDocument document, String chartTitle, String echartsConfig) throws IOException, InvalidFormatException {
-        // 创建段落来放置图表
-        XWPFParagraph chartParagraph = document.createParagraph();
-        chartParagraph.setAlignment(ParagraphAlignment.CENTER);
-
         // 根据ECharts配置创建相应类型的图表
         XWPFChart chart = createChartBasedOnEChartsConfig(document, chartTitle, echartsConfig);
-        
-        // 设置图表显示尺寸
-        chart.getCTChartSpace().getChart();
+
+        // 注意：document.createChart() 已经自动将图表添加到文档中
+        // 不需要手动创建段落或run来关联图表
     }
 
     /**

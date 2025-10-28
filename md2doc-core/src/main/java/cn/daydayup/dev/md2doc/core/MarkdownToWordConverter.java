@@ -32,10 +32,17 @@ public class MarkdownToWordConverter {
             "```echarts\\s*\\n(.*?)\\n```",
             Pattern.DOTALL
     );
+    // 用于匹配Mermaid代码块的正则表达式
+    private static final Pattern MERMAID_PATTERN = Pattern.compile(
+            "```mermaid\\s*\\n(.*?)\\n```",
+            Pattern.DOTALL
+    );
     // 用于匹配表格的正则表达式
     private static final Pattern TABLE_PATTERN = Pattern.compile("(\\|[^\\n]*\\|\\s*\\n\\s*\\|[-|:\\s]*\\|\\s*\\n(?:\\s*\\|[^\\n]*\\|\\s*\\n?)*)", Pattern.MULTILINE);
     // 用于匹配标题的正则表达式
     private static final Pattern HEADER_PATTERN = Pattern.compile("^(#{1,6})\\s+(.*)$", Pattern.MULTILINE);
+    // 用于匹配图片的正则表达式: ![alt](url)
+    private static final Pattern IMAGE_PATTERN = Pattern.compile("!\\[([^\\]]*)\\]\\(([^)]+)\\)", Pattern.MULTILINE);
 
     /**
      * 将Markdown文件转换为Word文档
@@ -64,6 +71,12 @@ public class MarkdownToWordConverter {
 
         val params = WordParams.create();
 
+        // 处理图片（在 ECharts、Mermaid 和表格之前处理）
+        processImages(params, markdownContent);
+
+        // 处理 Mermaid 图表
+        processMermaid(params, markdownContent);
+
         // 处理ECharts图表
         processECharts(params, markdownContent);
 
@@ -86,6 +99,63 @@ public class MarkdownToWordConverter {
         logger.info("Markdown文档已成功转换为Word文档: {}，耗时: {}ms", outputFile, (endTime - startTime));
     }
 
+
+    /**
+     * 处理 Mermaid 图表
+     * Mermaid 图表将被转换为文本说明（占位符）
+     * @param params Word参数对象
+     * @param markdownContent Markdown内容
+     */
+    private void processMermaid(WordParams params, String markdownContent) {
+        Matcher matcher = MERMAID_PATTERN.matcher(markdownContent);
+        int mermaidIndex = 1;
+
+        while (matcher.find()) {
+            String mermaidContent = matcher.group(1).trim();
+            String mermaidKey = "mermaid" + mermaidIndex;
+
+            logger.info("处理 Mermaid 图表 [{}]", mermaidIndex);
+
+            // 创建 Mermaid 图表的文本表示
+            String mermaidText = "【Mermaid 图表】\n\n" + mermaidContent + "\n\n" +
+                    "注意: Mermaid 图表已保留原始代码。如需可视化效果,请访问 https://mermaid.live/ 查看。";
+
+            params.setText(mermaidKey, mermaidText);
+            mermaidIndex++;
+        }
+
+        if (mermaidIndex > 1) {
+            logger.info("共处理 {} 个 Mermaid 图表", mermaidIndex - 1);
+        }
+    }
+
+    /**
+     * 处理图片
+     * @param params Word参数对象
+     * @param markdownContent Markdown内容
+     */
+    private void processImages(WordParams params, String markdownContent) {
+        Matcher matcher = IMAGE_PATTERN.matcher(markdownContent);
+        int imageIndex = 1;
+
+        while (matcher.find()) {
+            String altText = matcher.group(1);  // alt 文本
+            String imageSource = matcher.group(2);  // 图片 URL 或路径
+            String imageKey = "image" + imageIndex;
+
+            logger.info("处理图片 [{}]: {} (alt: {})", imageIndex, imageSource, altText);
+
+            // 使用 WordParam.image(String) 方法，自动处理下载和失败情况
+            WordParam imageParam = WordParam.image(imageSource);
+            params.setParam(imageKey, imageParam);
+
+            imageIndex++;
+        }
+
+        if (imageIndex > 1) {
+            logger.info("共处理 {} 张图片", imageIndex - 1);
+        }
+    }
 
     /**
      * 处理ECharts图表

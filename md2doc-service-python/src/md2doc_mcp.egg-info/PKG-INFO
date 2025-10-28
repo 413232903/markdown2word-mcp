@@ -1,0 +1,265 @@
+Metadata-Version: 2.4
+Name: md2doc-mcp
+Version: 1.0.0
+Summary: Markdown to Word document converter MCP server
+Author-email: md2doc-plus <dev@example.com>
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: mcp>=0.1.0
+Requires-Dist: python-docx>=1.1.0
+Requires-Dist: Pillow>=10.0.0
+Requires-Dist: pyecharts>=2.0.0
+Requires-Dist: snapshot-pyppeteer>=0.0.2
+Requires-Dist: requests>=2.31.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+
+# md2doc-mcp
+
+基于 Python 的 Markdown 转 Word 文档 MCP 服务器，完整复刻了 Java 版本的所有功能。
+
+## 功能特性
+
+- **Markdown 解析**：支持 H1-H6 标题、段落、表格
+- **ECharts 图表转换**：将 ```echarts 代码块转换为 Word 图表（柱状图、折线图、饼图）
+- **动态 Word 模板生成**：根据 Markdown 结构创建带占位符的模板
+- **标题自动编号**：多级标题自动添加序号（如 1.1、1.2.3）
+- **格式化样式**：标题样式、段落格式、表格样式
+- **MCP 协议支持**：符合 Anthropic MCP 规范，可被 Claude Desktop 调用
+
+## 安装
+
+```bash
+cd md2doc-service-python
+pip install -e .
+```
+
+## MCP 工具
+
+### convert_markdown_text
+
+将 Markdown 文本转换为 Word 文档
+
+**参数**：
+- `content` (str): Markdown 文本内容
+
+**返回**：
+- 包含转换结果的文本内容
+
+### convert_markdown_file
+
+将 Markdown 文件转换为 Word 文档
+
+**参数**：
+- `file_path` (str): Markdown 文件路径
+
+**返回**：
+- 包含转换结果的文本内容
+
+### get_supported_features
+
+获取支持的功能列表
+
+**返回**：
+- 包含功能列表的文本内容
+
+## 支持的 Markdown 语法
+
+- **标题 (H1-H6)**：自动编号，支持多级标题
+- **段落文本**：小四号宋体，1.5倍行距，首行缩进2字符
+- **表格**：自动解析，表头背景色，居中对齐
+- **ECharts 图表代码块**：使用 ```echarts 代码块
+
+### ECharts 支持
+
+支持以下图表类型：
+- **柱状图** (bar)
+- **折线图** (line)  
+- **饼图** (pie)
+
+示例：
+```markdown
+```echarts
+{
+  title: { text: '销售数据' },
+  xAxis: { data: ['1月', '2月', '3月'] },
+  series: [{ 
+    name: '销售额', 
+    data: [120, 200, 150] 
+  }]
+}
+```
+```
+
+## 在 Claude Desktop 中配置
+
+1. 安装依赖：
+```bash
+pip install md2doc-mcp
+```
+
+2. 在 Claude Desktop 配置文件中添加：
+```json
+{
+  "mcpServers": {
+    "md2doc": {
+      "command": "python",
+      "args": ["-m", "md2doc_mcp.server"]
+    }
+  }
+}
+```
+
+配置文件位置：
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+## 示例用法
+
+### 在 Claude Desktop 中使用
+
+1. 启动 Claude Desktop
+2. 使用 MCP 工具：
+
+```
+请使用 convert_markdown_text 工具将以下 Markdown 转换为 Word 文档：
+
+# 项目报告
+
+## 概述
+这是一个测试文档。
+
+## 数据表格
+| 项目 | 进度 | 状态 |
+|------|------|------|
+| 任务1 | 80% | 进行中 |
+| 任务2 | 100% | 完成 |
+
+## 图表分析
+```echarts
+{
+  title: { text: '项目进度' },
+  xAxis: { data: ['任务1', '任务2'] },
+  series: [{ 
+    name: '进度', 
+    data: [80, 100] 
+  }]
+}
+```
+```
+
+### 直接使用 Python API
+
+```python
+from md2doc_mcp.core.converter import MarkdownToWordConverter
+
+converter = MarkdownToWordConverter()
+
+# 转换 Markdown 文本
+markdown_content = """# 标题
+## 子标题
+这是内容"""
+converter.convert_markdown_to_word(markdown_content, "output.docx")
+
+# 转换 Markdown 文件
+converter.convert_markdown_file("input.md", "output.docx")
+```
+
+## 技术架构
+
+### 核心组件
+
+1. **MarkdownToWordConverter**：主转换器，协调各组件
+2. **MarkdownParser**：Markdown 解析器
+3. **TableParser**：表格解析器
+4. **EChartsToWordConverter**：ECharts 转换器
+5. **DynamicWordDocumentCreator**：动态模板创建器
+6. **PoiWordGenerator**：Word 文档生成器
+
+### 技术栈
+
+- **MCP SDK**：实现 MCP 协议
+- **python-docx**：Word 文档操作
+- **Pillow**：图像处理
+- **JSON**：ECharts 配置解析
+
+### 工作流程
+
+1. 解析 Markdown 内容，识别各种元素
+2. 根据内容结构动态创建 Word 模板
+3. 处理 ECharts 图表、表格、文本内容
+4. 将解析后的数据填充到模板中
+5. 生成最终的 Word 文档
+
+## 开发
+
+### 运行测试
+
+```bash
+# 安装开发依赖
+pip install -e ".[dev]"
+
+# 运行测试
+pytest tests/
+
+# 运行特定测试
+pytest tests/test_converter.py::TestMarkdownParser::test_extract_headers
+```
+
+### 项目结构
+
+```
+md2doc-service-python/
+├── pyproject.toml          # 项目配置
+├── README.md               # 项目说明
+├── src/
+│   └── md2doc_mcp/
+│       ├── __init__.py
+│       ├── server.py       # MCP 服务器
+│       ├── core/           # 核心转换逻辑
+│       │   ├── converter.py
+│       │   ├── template_creator.py
+│       │   ├── word_generator.py
+│       │   └── echarts_converter.py
+│       ├── parser/         # 解析器
+│       │   ├── markdown_parser.py
+│       │   └── table_parser.py
+│       └── models/         # 数据模型
+│           ├── word_params.py
+│           ├── chart_table.py
+│           └── chart_column.py
+└── tests/                  # 测试文件
+    └── test_converter.py
+```
+
+## 故障排除
+
+### 常见问题
+
+1. **MCP 服务器无法启动**
+   - 检查 Python 环境是否正确
+   - 确认所有依赖已安装
+   - 查看 Claude Desktop 日志
+
+2. **转换失败**
+   - 检查 Markdown 内容是否有效
+   - 确认输出路径可写
+   - 查看错误信息
+
+3. **图表不显示**
+   - 检查 ECharts 配置格式
+   - 确认 JSON 语法正确
+   - 验证数据格式
+
+### 日志和调试
+
+启用详细日志：
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+## 许可证
+
+本项目基于原 Java 版本的功能进行 Python 重写，保持相同的功能特性。
