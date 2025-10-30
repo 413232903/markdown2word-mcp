@@ -16,6 +16,8 @@ spring:
 
         # 启用传输协议
         transport:
+          stdio:
+            enabled: true
           sse:
             enabled: true
             path: /mcp/sse
