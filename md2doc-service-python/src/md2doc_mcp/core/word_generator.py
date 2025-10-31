@@ -248,28 +248,58 @@ class PoiWordGenerator:
         # 添加图像
         try:
             from io import BytesIO
+            
+            # 验证图片数据
+            if not image_param.image_data or len(image_param.image_data) == 0:
+                paragraph.add_run(f"[图像数据为空]")
+                return
+            
+            # 创建图片流并确保位置在开头
             image_stream = BytesIO(image_param.image_data)
+            image_stream.seek(0)  # 重置流位置到开头，确保 add_picture 能正确读取
 
             # 计算图片尺寸（使用 Inches，Word 的默认单位）
-            # width 和 height 已经是像素值
-            width_inches = Inches(image_param.width / 96)  # 96 DPI
-            height_inches = Inches(image_param.height / 96)
+            # 使用更合理的 DPI 转换（Word 默认 96 DPI，但实际显示可能不同）
+            # 为了更好的显示效果，使用 72 DPI 进行计算（标准屏幕 DPI）
+            dpi = 72  # 使用标准 DPI
+            width_inches = Inches(image_param.width / dpi)
+            height_inches = Inches(image_param.height / dpi)
 
-            # 限制最大尺寸（避免图片过大）
-            max_width = Inches(6)  # 最大 6 英寸
-            max_height = Inches(8)  # 最大 8 英寸
+            # 限制最大尺寸（适应 Word A4 页面，留出边距）
+            # A4 页面宽度约 8.27 英寸，高度约 11.69 英寸
+            # 考虑页边距，实际可用宽度约 6.5 英寸，高度约 9.5 英寸
+            max_width = Inches(6.5)  # 最大 6.5 英寸
+            max_height = Inches(9.5)  # 最大 9.5 英寸
 
-            # 等比例缩放
+            # 等比例缩放，确保图片完全显示
             if width_inches > max_width or height_inches > max_height:
-                ratio = min(max_width / width_inches, max_height / height_inches)
+                width_ratio = max_width / width_inches if width_inches > max_width else 1
+                height_ratio = max_height / height_inches if height_inches > max_height else 1
+                ratio = min(width_ratio, height_ratio)
                 width_inches = width_inches * ratio
                 height_inches = height_inches * ratio
 
+            # 确保最小尺寸（避免图片过小）
+            min_width = Inches(1)  # 最小 1 英寸
+            min_height = Inches(0.75)  # 最小 0.75 英寸
+            
+            if width_inches < min_width:
+                # 等比例调整
+                height_inches = height_inches * (min_width / width_inches)
+                width_inches = min_width
+            
+            if height_inches < min_height:
+                # 等比例调整
+                width_inches = width_inches * (min_height / height_inches)
+                height_inches = min_height
+
+            # 添加图片到段落
             paragraph.add_run().add_picture(image_stream, width=width_inches, height=height_inches)
 
         except Exception as e:
             print(f"添加图像时出错: {e}")
-            paragraph.add_run(f"[图像加载失败]")
+            print(f"图片尺寸: {image_param.width}x{image_param.height}, 数据大小: {len(image_param.image_data) if image_param.image_data else 0} 字节")
+            paragraph.add_run(f"[图像加载失败: {str(e)}]")
             import traceback
             traceback.print_exc()
     

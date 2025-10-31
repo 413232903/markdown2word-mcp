@@ -152,30 +152,97 @@ class MarkdownToWordConverter:
         """
         try:
             images = MarkdownParser.extract_images(markdown_content)
+            
+            if not images:
+                print("未找到任何图片")
+                return
+            
+            print(f"找到 {len(images)} 张图片，开始处理...")
             image_index = 1
+            success_count = 0
+            fail_count = 0
 
             for alt_text, image_url, title in images:
                 image_key = f"image{image_index}"
 
-                print(f"正在处理图片 {image_index}: {image_url}...")
+                print(f"\n正在处理图片 {image_index}/{len(images)}: {image_url}")
+                print(f"  标题: {title}")
+                print(f"  描述: {alt_text}")
 
-                # 下载/读取并处理图片
-                result = ImageDownloader.process_image(image_url)
+                try:
+                    # 验证图片 URL 格式
+                    from urllib.parse import urlparse
+                    parsed = urlparse(image_url)
+                    if parsed.scheme not in ('http', 'https', 'file', ''):
+                        print(f"  警告: 不支持的图片协议: {parsed.scheme}")
+                        if parsed.scheme == '':
+                            print(f"  提示: 这可能是相对路径，将尝试作为本地文件处理")
 
-                if result:
-                    image_data, width, height = result
-                    # 将图片作为 ImageParam 添加
-                    params.set_param(image_key, WordParams.image(image_data, width, height))
-                    print(f"图片 {image_index} 处理成功 ({width}x{height})")
-                else:
-                    print(f"图片 {image_index} 处理失败: {image_url}")
-                    # 如果失败，添加一个占位文本
-                    params.set_text(image_key, f"[图片加载失败: {alt_text}]")
+                    # 下载/读取并处理图片
+                    result = ImageDownloader.process_image(image_url)
+
+                    if result:
+                        image_data, width, height = result
+                        
+                        # 验证图片数据
+                        if not image_data or len(image_data) == 0:
+                            print(f"  错误: 图片数据为空")
+                            params.set_text(image_key, f"[图片数据为空: {alt_text}]")
+                            fail_count += 1
+                        elif width <= 0 or height <= 0:
+                            print(f"  错误: 图片尺寸无效 ({width}x{height})")
+                            params.set_text(image_key, f"[图片尺寸无效: {alt_text}]")
+                            fail_count += 1
+                        else:
+                            # 验证图片格式（通过文件头）
+                            image_format_valid = False
+                            try:
+                                from PIL import Image
+                                from io import BytesIO
+                                # 先验证图片格式
+                                img = Image.open(BytesIO(image_data))
+                                img_format = img.format
+                                img.close()  # 关闭图片（verify 后会自动关闭，但为了安全手动关闭）
+                                
+                                # 重新打开用于验证完整性（verify 会关闭图片）
+                                img = Image.open(BytesIO(image_data))
+                                img.verify()  # 验证图片完整性
+                                
+                                image_format_valid = True
+                                print(f"  图片格式验证通过: {img_format}")
+                            except Exception as format_error:
+                                print(f"  警告: 图片格式验证失败: {format_error}")
+                                # 仍然尝试使用，因为有些图片可能可以正常显示
+                                # 例如：某些特殊格式或损坏的图片可能仍然可以在 Word 中显示
+                                image_format_valid = True  # 允许继续，让 Word 自己判断
+                            
+                            if image_format_valid:
+                                # 将图片作为 ImageParam 添加
+                                params.set_param(image_key, WordParams.image(image_data, width, height))
+                                print(f"  ✓ 图片 {image_index} 处理成功 ({width}x{height} 像素, {len(image_data)} 字节)")
+                                success_count += 1
+                            else:
+                                params.set_text(image_key, f"[图片格式无效: {alt_text}]")
+                                fail_count += 1
+                    else:
+                        print(f"  ✗ 图片 {image_index} 处理失败: {image_url}")
+                        # 如果失败，添加一个占位文本
+                        params.set_text(image_key, f"[图片加载失败: {alt_text or title}]")
+                        fail_count += 1
+
+                except Exception as img_error:
+                    print(f"  ✗ 处理图片 {image_index} 时发生异常: {img_error}")
+                    import traceback
+                    traceback.print_exc()
+                    params.set_text(image_key, f"[图片处理异常: {alt_text or title}]")
+                    fail_count += 1
 
                 image_index += 1
 
+            print(f"\n图片处理完成: 成功 {success_count} 张, 失败 {fail_count} 张")
+
         except Exception as e:
-            print(f"处理图片时出错: {e}")
+            print(f"处理图片时发生严重错误: {e}")
             import traceback
             traceback.print_exc()
 
