@@ -20,7 +20,7 @@ def test_mcp_protocol():
     print("-"*60)
     try:
         response = requests.get(
-            f"{SERVER}/sse",
+            f"{SERVER}/md2doc",
             headers={"Accept": "text/event-stream"},
             stream=True,
             timeout=5

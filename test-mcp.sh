@@ -11,9 +11,9 @@ echo ""
 SERVER="http://localhost:8080"
 
 # 1. 测试 SSE 端点
-echo "1. 测试 MCP SSE 端点 /sse..."
+echo "1. 测试 MCP SSE 端点 /md2doc..."
 echo "---"
-timeout 2 curl -N -H "Accept: text/event-stream" "$SERVER/sse" 2>/dev/null
+timeout 2 curl -N -H "Accept: text/event-stream" "$SERVER/md2doc" 2>/dev/null
 echo ""
 echo "✓ SSE 端点正常 (如果看到 sessionId 返回)"
 echo ""
@@ -72,7 +72,7 @@ echo '      "args": ['
 echo '        "-N",'
 echo '        "-H",'
 echo '        "Accept: text/event-stream",'
-echo '        "http://192.9.243.78:8080/sse"'
+echo '        "http://192.9.243.78:8080/md2doc"'
 echo '      ]'
 echo '    }'
 echo '  }'
