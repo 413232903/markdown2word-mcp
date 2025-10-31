@@ -95,8 +95,9 @@ public sealed interface WordParam {
                     bufferedImage.getHeight()
             );
 
-            this.width = Units.toEMU(adaptiveSize[0]);
-            this.height = Units.toEMU(adaptiveSize[1]);
+            // 修复: 使用 pixelToEMU 而不是 toEMU (toEMU 是用于 points 而不是 pixels)
+            this.width = Units.pixelToEMU(adaptiveSize[0]);
+            this.height = Units.pixelToEMU(adaptiveSize[1]);
         }
 
         private static InputStream toInputStream(BufferedImage image) throws IOException {
