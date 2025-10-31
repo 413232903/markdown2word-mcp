@@ -12,7 +12,7 @@ Model Context Protocol (MCP) 是一个开放协议，使 AI 模型能够与外�
 mvn spring-boot:run
 ```
 
-服务将在 `http://localhost:8080` 启动，MCP 端点为 `http://localhost:8080/mcp/sse`。
+服务将在 `http://localhost:8080` 启动，MCP 端点为 `http://localhost:8080/md2doc`。
 
 ### 2. 配置 MCP 客户端
 
@@ -33,7 +33,7 @@ mvn spring-boot:run
       "args": [
         "-N",
         "-H", "Accept: text/event-stream",
-        "http://localhost:8080/mcp/sse"
+        "http://localhost:8080/md2doc"
       ],
       "type": "sse"
     }
@@ -140,7 +140,7 @@ spring:
         transport:
           sse:
             enabled: true              # 启用/禁用 SSE 传输
-            path: /mcp/sse            # SSE 端点路径
+            path: /md2doc            # SSE 端点路径
             timeout: 1800000          # 连接超时 (毫秒)
             heartbeat-interval: 30000 # 心跳间隔 (毫秒)
         tools:
@@ -175,7 +175,7 @@ logging:
 
 ### MCP 服务器无法连接
 
-1. 确认服务已启动: `curl http://localhost:8080/mcp/sse`
+1. 确认服务已启动: `curl http://localhost:8080/md2doc`
 2. 检查防火墙设置
 3. 查看服务日志
 

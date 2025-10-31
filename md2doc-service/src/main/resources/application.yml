@@ -20,7 +20,7 @@ spring:
             enabled: true
           sse:
             enabled: true
-            path: /mcp/sse
+            path: /md2doc
 
 # 日志配置
 logging:
