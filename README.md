@@ -104,3 +104,29 @@ public static void main(String[] args) throws Exception {
 ~~2. 图表样式缺失，图表显示不全，需手动调整；（已解决）~~
 
 ~~3. 标题序号缺失、标题格式缺失，不能自动列出目录；（已解决）~~
+
+## 路由冲突排查与优化
+
+在将多个 MCP 服务统一映射到一个公网域名时，最常见的故障是**网关层转发的路径与服务端真正监听的路径不一致**。本项目的 MCP SSE 端点默认写死为 `/dataReport/md2doc`，当网关 (Nginx、API Gateway 等) 再包一层前缀（例如 `/ai-tools/dataReport/md2doc`）或已有别的服务占用了 `/dataReport/md2doc` 时，后端收到的请求路径就会变成别的值，从而返回 404 或被错误的服务处理。
+
+排查步骤：
+- 确认 `md2doc-service/src/main/resources/application.yml` 中 `spring.ai.mcp.server.sse-endpoint` 的值，目前默认为 `/dataReport/md2doc`。
+- 在网关上执行 `curl -i https://your-domain/实际访问路径`，查看响应头里的 `X-Upstream-Response` / `Via` 等信息，确认真正命中的服务。
+- 查看网关配置中对应的 `location` / `routes`，确认是否做了 `rewrite` 或拼接了额外前缀。
+
+推荐解决思路：
+- **方式一：在网关层做路径改写。** 例如 Nginx：
+  ```nginx
+  location /ai-tools/dataReport/md2doc/ {
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_pass http://md2doc_backend/dataReport/md2doc/;
+  }
+  ```
+  `proxy_pass` 写成以 `/dataReport/md2doc/` 结尾，可自动把 `/ai-tools/dataReport/md2doc/` 前缀裁掉，后端仍然收到 `/dataReport/md2doc`。
+- **方式二：修改服务端端点。** 如果网关无法改动，可在 `application.yml` 里把 `sse-endpoint` 改成其它不冲突的路径（如 `/dataReport/md2doc`），同时同步更新所有 MCP 客户端配置。
+- **方式三：为不同服务使用不同二级域名**（如 `md2doc-mcp.example.com`），彻底避免路径冲突。
+
+落地建议：
+- 先在测试环境验证改写或端点调整是否正常握手 (使用 `curl -N -H "Accept: text/event-stream" <URL>` 测试 SSE)。
+- 调整后及时更新部署文档与客户端配置文件，避免团队成员继续使用旧地址。

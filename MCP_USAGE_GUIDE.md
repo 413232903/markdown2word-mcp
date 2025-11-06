@@ -19,7 +19,7 @@ http://192.9.243.78:8080
 
 ### MCP SSE 端点
 ```
-http://192.9.243.78:8080/md2doc
+http://192.9.243.78:8080/dataReport/md2doc
 ```
 
 ### REST API 端点
@@ -51,7 +51,7 @@ POST http://192.9.243.78:8080/api/markdown/convert/file
         "-N",
         "-H",
         "Accept: text/event-stream",
-        "http://192.9.243.78:8080/md2doc"
+        "http://192.9.243.78:8080/dataReport/md2doc"
       ]
     }
   }
@@ -60,25 +60,25 @@ POST http://192.9.243.78:8080/api/markdown/convert/file
 
 ### 注意事项
 
-1. **端点路径**: MCP SSE 端点是 `/md2doc` (不是 `/mcp/messages` 或 `/mcp/md2doc`)
+1. **端点路径**: MCP SSE 端点是 `/dataReport/md2doc`
 2. **握手流程**:
-   - 客户端首先连接 `/md2doc` 端点
+   - 客户端首先连接 `/dataReport/md2doc` 端点
    - 服务器返回 sessionId
-   - 后续消息使用 `/mcp/message?sessionId=xxx` 端点
+   - 后续消息使用 `/dataReport/mcp/message?sessionId=xxx` 端点
 3. **网络**: 确保客户端和服务器在同一局域网,或使用公网 IP
 
 ## 🧪 测试方法
 
 ### 1. 测试 SSE 端点连接
 ```bash
-curl -N -H "Accept: text/event-stream" http://192.9.243.78:8080/md2doc
+curl -N -H "Accept: text/event-stream" http://192.9.243.78:8080/dataReport/md2doc
 ```
 
 应该返回类似:
 ```
 id:xxxx-xxxx-xxxx
 event:endpoint
-data:/mcp/message?sessionId=xxxx-xxxx-xxxx
+data:/dataReport/mcp/message?sessionId=xxxx-xxxx-xxxx
 ```
 
 ### 2. 测试 REST API
@@ -138,11 +138,11 @@ AI 会自动调用 `convertMarkdownText` 工具,并返回 Base64 编码的 Word 
 ```
 客户端                    MCP 服务器
    |                          |
-   |--- GET /md2doc -----------→ |
+   |--- GET /dataReport/md2doc --→ |
    |                          | (建立 SSE 连接)
    |←-- sessionId -----------|
    |                          |
-   |--- POST /mcp/message --→ |
+   |--- POST /dataReport/mcp/message --→ |
    |    (带 sessionId)        |
    |                          | (处理请求)
    |←-- 响应 ----------------|
@@ -170,10 +170,10 @@ Enable completions capabilities
 ### 问题 2: MCP 工具不可见
 - 确认配置文件路径正确
 - 重启 Claude Desktop / Cursor
-- 检查端点地址是否正确 (必须是 `/md2doc`)
+- 检查端点地址是否正确 (必须是 `/dataReport/md2doc`)
 
 ### 问题 3: 404 错误
-- 确认使用 `/md2doc` 端点而不是其他路径
+- 确认使用 `/dataReport/md2doc` 端点而不是其他路径
 - 检查服务日志是否有错误
 
 ## 📚 更多信息

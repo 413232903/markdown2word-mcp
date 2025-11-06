@@ -20,7 +20,7 @@ def test_mcp_protocol():
     print("-"*60)
     try:
         response = requests.get(
-            f"{SERVER}/md2doc",
+            f"{SERVER}/dataReport/md2doc",
             headers={"Accept": "text/event-stream"},
             stream=True,
             timeout=5
@@ -30,7 +30,7 @@ def test_mcp_protocol():
         for line in response.iter_lines(decode_unicode=True):
             if line.startswith("data:"):
                 data = line[5:].strip()
-                if "/mcp/message" in data:
+                if "/dataReport/mcp/message" in data:
                     # 提取 sessionId
                     if "sessionId=" in data:
                         session_id = data.split("sessionId=")[1]
@@ -69,7 +69,7 @@ def test_mcp_protocol():
 
     try:
         response = requests.post(
-            f"{SERVER}/mcp/message",
+            f"{SERVER}/dataReport/mcp/message",
             params={"sessionId": session_id},
             json=init_request,
             headers={"Content-Type": "application/json"}
@@ -100,7 +100,7 @@ def test_mcp_protocol():
 
     try:
         response = requests.post(
-            f"{SERVER}/mcp/message",
+            f"{SERVER}/dataReport/mcp/message",
             params={"sessionId": session_id},
             json=tools_request,
             headers={"Content-Type": "application/json"}

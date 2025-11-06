@@ -15,8 +15,8 @@ spring:
         instructions: Markdown to Word Document Conversion MCP Server - 提供 Markdown 转换为 Word 文档的 AI 工具服务
 
         # SSE 端点配置
-        sse-endpoint: /md2doc
-        sse-message-endpoint: /mcp/message
+        sse-endpoint: /dataReport/md2doc
+        sse-message-endpoint: /dataReport/mcp/message
 
         # 启用传输协议
         transport:
