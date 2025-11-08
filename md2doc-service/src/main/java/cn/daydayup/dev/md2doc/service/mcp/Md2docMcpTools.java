@@ -8,13 +8,13 @@ import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Base64;
 import java.util.UUID;
 import java.util.function.BiFunction;
 
@@ -26,6 +26,9 @@ public class Md2docMcpTools {
 
     @Autowired
     private MarkdownConversionService markdownConversionService;
+
+    @Value("${md2doc.download-base-url:http://localhost:8080}")
+    private String downloadBaseUrl;
 
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir") + "/md2doc/";
 
@@ -51,16 +54,12 @@ public class Md2docMcpTools {
                 // 执行转换
                 markdownConversionService.convertMarkdownToWord(request.markdownContent, outputPath.toString());
 
-                // 读取生成的文件并转为 Base64
-                byte[] fileContent = Files.readAllBytes(outputPath);
-                String base64Content = Base64.getEncoder().encodeToString(fileContent);
-
                 // 构造响应
                 result.success = true;
                 result.message = "转换成功";
                 result.fileName = fileName + ".docx";
-                result.base64Content = base64Content;
-                result.fileSize = fileContent.length;
+                result.fileSize = Files.size(outputPath);
+                result.downloadUrl = buildDownloadUrl(result.fileName);
 
                 return result;
 
@@ -73,7 +72,7 @@ public class Md2docMcpTools {
         };
 
         return FunctionToolCallback.builder("convertMarkdownText", function)
-            .description("将 Markdown 文本内容转换为 Word 文档。支持标题、段落、表格、ECharts 图表、图片等元素。返回 Base64 编码的 Word 文档内容")
+            .description("将 Markdown 文本内容转换为 Word 文档。支持标题、段落、表格、ECharts 图表、图片等元素。返回可下载的 Word 文档链接")
             .inputType(ConvertTextRequest.class)
             .build();
     }
@@ -108,16 +107,12 @@ public class Md2docMcpTools {
                 // 执行转换
                 markdownConversionService.convertMarkdownFileToWord(request.markdownFilePath, outputPath.toString());
 
-                // 读取生成的文件并转为 Base64
-                byte[] fileContent = Files.readAllBytes(outputPath);
-                String base64Content = Base64.getEncoder().encodeToString(fileContent);
-
                 // 构造响应
                 result.success = true;
                 result.message = "转换成功";
                 result.fileName = fileName + ".docx";
-                result.base64Content = base64Content;
-                result.fileSize = fileContent.length;
+                result.fileSize = Files.size(outputPath);
+                result.downloadUrl = buildDownloadUrl(result.fileName);
 
                 return result;
 
@@ -130,7 +125,7 @@ public class Md2docMcpTools {
         };
 
         return FunctionToolCallback.builder("convertMarkdownFile", function)
-            .description("将指定路径的 Markdown 文件转换为 Word 文档。文件路径必须是绝对路径。返回 Base64 编码的 Word 文档内容")
+            .description("将指定路径的 Markdown 文件转换为 Word 文档。文件路径必须是绝对路径。返回可下载的 Word 文档链接")
             .inputType(ConvertFileRequest.class)
             .build();
     }
@@ -209,6 +204,7 @@ public class Md2docMcpTools {
         public String base64Content;
         public long fileSize;
         public String error;
+        public String downloadUrl;
     }
 
     /**
@@ -219,5 +215,12 @@ public class Md2docMcpTools {
         public String chartExample;
         public String tableExample;
         public String imageExample;
+    }
+
+    private String buildDownloadUrl(String fileName) {
+        String normalizedBaseUrl = downloadBaseUrl.endsWith("/")
+            ? downloadBaseUrl.substring(0, downloadBaseUrl.length() - 1)
+            : downloadBaseUrl;
+        return normalizedBaseUrl + "/api/markdown/files/" + fileName;
     }
 }

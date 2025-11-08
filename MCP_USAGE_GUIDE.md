@@ -36,6 +36,8 @@ POST http://192.9.243.78:8080/api/markdown/convert/file
 2. **convertMarkdownFile** - 将 Markdown 文件转换为 Word 文档
 3. **getSupportedFeatures** - 获取支持的 Markdown 特性列表
 
+> MCP 返回结果中会附带 `downloadUrl` 字段，指向可直接下载的 Word 文件；如需对外提供访问，请在启动参数或 `application.yml` 中设置 `md2doc.download-base-url`（默认值为 `http://localhost:8080`）。临时目录中的文件默认保留 10 天，可通过 `md2doc.temp-file-retention-days` 调整。
+
 ## 📱 配置 MCP 客户端
 
 ### Claude Desktop / Cursor
@@ -131,7 +133,7 @@ java -jar md2doc-service/target/md2doc-service-1.0.jar
 | 收入 | 50000 |
 ```
 
-AI 会自动调用 `convertMarkdownText` 工具,并返回 Base64 编码的 Word 文档。
+AI 会自动调用 `convertMarkdownText` 工具,并返回一个 Word 文档的下载链接。
 
 ## 🎯 MCP 协议流程
 

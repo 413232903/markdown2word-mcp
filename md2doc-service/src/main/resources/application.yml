@@ -25,6 +25,10 @@ spring:
           sse:
             enabled: true
 
+md2doc:
+  download-base-url: http://192.9.253.106:8080
+  temp-file-retention-days: 10
+
 # 日志配置
 logging:
   level:
