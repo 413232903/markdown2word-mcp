@@ -74,6 +74,7 @@ public class Md2docMcpTools {
         return FunctionToolCallback.builder("convertMarkdownText", function)
             .description("将 Markdown 文本内容转换为 Word 文档。支持标题、段落、表格、ECharts 图表、图片等元素。返回可下载的 Word 文档链接")
             .inputType(ConvertTextRequest.class)
+            .toolCallResultConverter(new Md2docToolResultConverter())
             .build();
     }
 
@@ -127,6 +128,7 @@ public class Md2docMcpTools {
         return FunctionToolCallback.builder("convertMarkdownFile", function)
             .description("将指定路径的 Markdown 文件转换为 Word 文档。文件路径必须是绝对路径。返回可下载的 Word 文档链接")
             .inputType(ConvertFileRequest.class)
+            .toolCallResultConverter(new Md2docToolResultConverter())
             .build();
     }
 
