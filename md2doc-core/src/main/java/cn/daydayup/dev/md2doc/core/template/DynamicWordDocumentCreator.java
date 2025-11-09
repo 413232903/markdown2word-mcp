@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 import java.util.Stack;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @ClassName DynamicWordDocumentCreator
@@ -26,6 +27,18 @@ import java.util.Map;
  * @Version 1.0
  */
 public class DynamicWordDocumentCreator {
+    
+    private static final Pattern UNORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)[-+*]\\s+(.*)$");
+    private static final Pattern ORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)(\\d+)\\.\\s+(.*)$");
+    private static final Pattern INLINE_STYLE_PATTERN = Pattern.compile("(\\*\\*.+?\\*\\*|__.+?__|\\*[^*]+?\\*|_[^_]+?_|`[^`]+?`)");
+    private static final int DEFAULT_FONT_SIZE = 12;
+    private static final String DEFAULT_FONT_FAMILY = "宋体";
+    private static final AtomicInteger NUMBERING_SEED = new AtomicInteger(1);
+
+    private static class NumberingCache {
+        private BigInteger bulletNumId;
+        private BigInteger orderedNumId;
+    }
     
     // 添加标题编号栈和映射
     private static class HeaderNumbering {
@@ -57,7 +70,211 @@ public class DynamicWordDocumentCreator {
             return sb.toString();
         }
     }
-    
+    private static void clearFirstLineIndent(XWPFParagraph paragraph) {
+        var ctp = paragraph.getCTP();
+        var pPr = ctp.isSetPPr() ? ctp.getPPr() : ctp.addNewPPr();
+        var ind = pPr.isSetInd() ? pPr.getInd() : pPr.addNewInd();
+        ind.setFirstLine(BigInteger.ZERO);
+        ind.setFirstLineChars(BigInteger.ZERO);
+    }
+
+    private static int calculateListLevel(String indent) {
+        if (indent == null || indent.isEmpty()) {
+            return 0;
+        }
+        int spaces = 0;
+        for (char c : indent.toCharArray()) {
+            if (c == '\t') {
+                spaces += 4;
+            } else if (c == ' ') {
+                spaces++;
+            }
+        }
+        int level = spaces / 2;
+        return Math.max(0, Math.min(level, 8));
+    }
+
+    private static BigInteger getOrCreateBulletNumId(XWPFDocument document, NumberingCache cache) {
+        if (cache.bulletNumId == null) {
+            cache.bulletNumId = createBulletNumbering(document);
+        }
+        return cache.bulletNumId;
+    }
+
+    private static BigInteger getOrCreateOrderedNumId(XWPFDocument document, NumberingCache cache) {
+        if (cache.orderedNumId == null) {
+            cache.orderedNumId = createOrderedNumbering(document);
+        }
+        return cache.orderedNumId;
+    }
+
+    private static BigInteger createBulletNumbering(XWPFDocument document) {
+        XWPFNumbering numbering = document.getNumbering();
+        if (numbering == null) {
+            numbering = document.createNumbering();
+        }
+
+        BigInteger abstractNumId = BigInteger.valueOf(NUMBERING_SEED.getAndIncrement());
+        CTAbstractNum ctAbstractNum = CTAbstractNum.Factory.newInstance();
+        ctAbstractNum.setAbstractNumId(abstractNumId);
+
+        String[] bullets = new String[]{"•", "◦", "▪"};
+        for (int i = 0; i < bullets.length; i++) {
+            CTLvl level = ctAbstractNum.addNewLvl();
+            level.setIlvl(BigInteger.valueOf(i));
+            level.addNewStart().setVal(BigInteger.ONE);
+            level.addNewNumFmt().setVal(STNumberFormat.BULLET);
+            level.addNewLvlText().setVal(bullets[i]);
+            level.addNewLvlJc().setVal(STJc.LEFT);
+            CTInd ind = level.addNewPPr().addNewInd();
+            ind.setLeft(BigInteger.valueOf(720 + 360L * i));
+            ind.setHanging(BigInteger.valueOf(360));
+        }
+
+        XWPFAbstractNum xwpfAbstractNum = new XWPFAbstractNum(ctAbstractNum);
+        BigInteger abstractId = numbering.addAbstractNum(xwpfAbstractNum);
+        return numbering.addNum(abstractId);
+    }
+
+    private static BigInteger createOrderedNumbering(XWPFDocument document) {
+        XWPFNumbering numbering = document.getNumbering();
+        if (numbering == null) {
+            numbering = document.createNumbering();
+        }
+
+        BigInteger abstractNumId = BigInteger.valueOf(NUMBERING_SEED.getAndIncrement());
+        CTAbstractNum ctAbstractNum = CTAbstractNum.Factory.newInstance();
+        ctAbstractNum.setAbstractNumId(abstractNumId);
+
+        for (int i = 0; i < 3; i++) {
+            CTLvl level = ctAbstractNum.addNewLvl();
+            level.setIlvl(BigInteger.valueOf(i));
+            level.addNewStart().setVal(BigInteger.ONE);
+            level.addNewNumFmt().setVal(STNumberFormat.DECIMAL);
+            level.addNewLvlText().setVal("%" + (i + 1) + ".");
+            level.addNewLvlJc().setVal(STJc.LEFT);
+            CTInd ind = level.addNewPPr().addNewInd();
+            ind.setLeft(BigInteger.valueOf(720 + 360L * i));
+            ind.setHanging(BigInteger.valueOf(360));
+        }
+
+        XWPFAbstractNum xwpfAbstractNum = new XWPFAbstractNum(ctAbstractNum);
+        BigInteger abstractId = numbering.addAbstractNum(xwpfAbstractNum);
+        return numbering.addNum(abstractId);
+    }
+
+    private enum RunStyle {
+        NORMAL, BOLD, ITALIC, CODE
+    }
+
+    private static void applyInlineStyles(XWPFParagraph paragraph, String content, int fontSize) {
+        if (content == null || content.isEmpty()) {
+            return;
+        }
+
+        Matcher matcher = INLINE_STYLE_PATTERN.matcher(content);
+        int currentIndex = 0;
+        while (matcher.find()) {
+            if (matcher.start() > currentIndex) {
+                String plainText = content.substring(currentIndex, matcher.start());
+                appendStyledRun(paragraph, plainText, RunStyle.NORMAL, fontSize);
+            }
+            String token = matcher.group();
+            if (token.startsWith("**") && token.endsWith("**") && token.length() >= 4) {
+                String boldText = token.substring(2, token.length() - 2);
+                appendStyledRun(paragraph, boldText, RunStyle.BOLD, fontSize);
+            } else if (token.startsWith("__") && token.endsWith("__") && token.length() >= 4) {
+                String boldText = token.substring(2, token.length() - 2);
+                appendStyledRun(paragraph, boldText, RunStyle.BOLD, fontSize);
+            } else if (token.startsWith("*") && token.endsWith("*") && token.length() >= 2) {
+                String italicText = token.substring(1, token.length() - 1);
+                appendStyledRun(paragraph, italicText, RunStyle.ITALIC, fontSize);
+            } else if (token.startsWith("_") && token.endsWith("_") && token.length() >= 2) {
+                String italicText = token.substring(1, token.length() - 1);
+                appendStyledRun(paragraph, italicText, RunStyle.ITALIC, fontSize);
+            } else if (token.startsWith("`") && token.length() >= 2) {
+                String codeText = token.substring(1, token.length() - 1);
+                appendStyledRun(paragraph, codeText, RunStyle.CODE, fontSize);
+            } else {
+                appendStyledRun(paragraph, token, RunStyle.NORMAL, fontSize);
+            }
+            currentIndex = matcher.end();
+        }
+        if (currentIndex < content.length()) {
+            appendStyledRun(paragraph, content.substring(currentIndex), RunStyle.NORMAL, fontSize);
+        }
+    }
+
+    private static void appendStyledRun(XWPFParagraph paragraph, String text, RunStyle style, int fontSize) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        XWPFRun run = paragraph.createRun();
+        run.setText(text, 0);
+        run.setFontSize(fontSize);
+        switch (style) {
+            case BOLD -> {
+                run.setBold(true);
+                run.setFontFamily(DEFAULT_FONT_FAMILY);
+            }
+            case ITALIC -> {
+                run.setItalic(true);
+                run.setFontFamily(DEFAULT_FONT_FAMILY);
+            }
+            case CODE -> {
+                run.setFontFamily("Consolas");
+                run.setColor("2E74B5");
+            }
+            default -> run.setFontFamily(DEFAULT_FONT_FAMILY);
+        }
+    }
+
+    private static boolean isTableHeaderLine(String[] lines, int index) {
+        if (index >= lines.length) {
+            return false;
+        }
+        String header = lines[index];
+        if (header == null || !header.contains("|")) {
+            return false;
+        }
+
+        // 标准Markdown表格，下一行是分隔线
+        if (index < lines.length - 1) {
+            String separator = lines[index + 1];
+            if (isTableSeparatorLine(separator)) {
+                return true;
+            }
+        }
+
+        // 放宽规则：当前行和下一行都包含竖线，则认为是表格
+        if (index < lines.length - 1) {
+            String nextLine = lines[index + 1];
+            if (nextLine != null && nextLine.contains("|")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean isTableRowLine(String line) {
+        if (line == null) {
+            return false;
+        }
+        String trimmed = line.trim();
+        if (trimmed.isEmpty()) {
+            return false;
+        }
+        return trimmed.contains("|") || isTableSeparatorLine(trimmed);
+    }
+
+    private static boolean isTableSeparatorLine(String line) {
+        if (line == null) {
+            return false;
+        }
+        String trimmed = line.trim();
+        return trimmed.matches("^\\|?\\s*:?-{2,}[:\\-\\s|]*\\|?\\s*$");
+    }
     /**
      * 根据Markdown内容创建更完整的模板
      * @param filePath 输出文件路径
@@ -262,6 +479,7 @@ public class DynamicWordDocumentCreator {
 
         // 初始化标题编号器
         HeaderNumbering headerNumbering = new HeaderNumbering();
+        NumberingCache numberingCache = new NumberingCache();
         
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
@@ -298,6 +516,44 @@ public class DynamicWordDocumentCreator {
                 continue;
             }
             
+            // 检查是否为无序列表
+            Matcher unorderedMatcher = UNORDERED_LIST_PATTERN.matcher(line);
+            if (unorderedMatcher.matches()) {
+                String indent = unorderedMatcher.group(1);
+                String itemContent = unorderedMatcher.group(2).trim();
+
+                XWPFParagraph listParagraph = document.createParagraph();
+                setDefaultParagraphStyle(listParagraph);
+                clearFirstLineIndent(listParagraph);
+
+                int level = calculateListLevel(indent);
+                BigInteger numId = getOrCreateBulletNumId(document, numberingCache);
+                listParagraph.setNumID(numId);
+                listParagraph.setNumILvl(BigInteger.valueOf(level));
+
+                applyInlineStyles(listParagraph, itemContent, DEFAULT_FONT_SIZE);
+                continue;
+            }
+
+            // 检查是否为有序列表
+            Matcher orderedMatcher = ORDERED_LIST_PATTERN.matcher(line);
+            if (orderedMatcher.matches()) {
+                String indent = orderedMatcher.group(1);
+                String itemContent = orderedMatcher.group(3).trim();
+
+                XWPFParagraph listParagraph = document.createParagraph();
+                setDefaultParagraphStyle(listParagraph);
+                clearFirstLineIndent(listParagraph);
+
+                int level = calculateListLevel(indent);
+                BigInteger numId = getOrCreateOrderedNumId(document, numberingCache);
+                listParagraph.setNumID(numId);
+                listParagraph.setNumILvl(BigInteger.valueOf(level));
+
+                applyInlineStyles(listParagraph, itemContent, DEFAULT_FONT_SIZE);
+                continue;
+            }
+
             // 检查是否为ECharts图表
             if (line.trim().equals("```echarts")) {
                 // 查找图表代码块的结束位置
@@ -354,16 +610,15 @@ public class DynamicWordDocumentCreator {
             }
 
             // 检查是否为表格开始
-            if (line.startsWith("|")) {
-                // 收集表格的所有行
-                StringBuilder tableMarkdown = new StringBuilder(line).append("\n");
-                i++; // 移动到下一行
-                while (i < lines.length && (lines[i].startsWith("|") || lines[i].trim().matches("^\\|?\\s*[-|:\\s]+\\|?\\s*$"))) {
+            if (isTableHeaderLine(lines, i)) {
+                StringBuilder tableMarkdown = new StringBuilder(lines[i]).append("\n");
+                i++;
+                while (i < lines.length && isTableRowLine(lines[i])) {
                     tableMarkdown.append(lines[i]).append("\n");
                     i++;
                 }
                 i--; // 回退一行，因为循环会自动增加i
-                
+
                 // 创建表格占位符
                 XWPFParagraph tableTitleParagraph = document.createParagraph();
                 tableTitleParagraph.setAlignment(ParagraphAlignment.CENTER); // 设置居中对齐
@@ -378,7 +633,7 @@ public class DynamicWordDocumentCreator {
                 setDefaultParagraphStyle(tableParagraph);
                 XWPFRun tableRun = tableParagraph.createRun();
                 tableRun.setText("${table" + tableIndex + "}");
-                
+
                 tableIndex++;
                 continue;
             }
@@ -396,10 +651,7 @@ public class DynamicWordDocumentCreator {
                     if (!beforeImage.trim().isEmpty()) {
                         XWPFParagraph paragraph = document.createParagraph();
                         setDefaultParagraphStyle(paragraph);
-                        XWPFRun run = paragraph.createRun();
-                        run.setText(beforeImage);
-                        run.setFontFamily("宋体");
-                        run.setFontSize(12);
+                        applyInlineStyles(paragraph, beforeImage.trim(), DEFAULT_FONT_SIZE);
                     }
 
                     // 创建图片占位符段落
@@ -415,19 +667,13 @@ public class DynamicWordDocumentCreator {
                     if (!afterImage.trim().isEmpty()) {
                         XWPFParagraph paragraph = document.createParagraph();
                         setDefaultParagraphStyle(paragraph);
-                        XWPFRun run = paragraph.createRun();
-                        run.setText(afterImage);
-                        run.setFontFamily("宋体");
-                        run.setFontSize(12);
+                        applyInlineStyles(paragraph, afterImage.trim(), DEFAULT_FONT_SIZE);
                     }
                 } else {
                     // 普通文本行
                     XWPFParagraph paragraph = document.createParagraph();
                     setDefaultParagraphStyle(paragraph); // 内容段落使用默认样式
-                    XWPFRun run = paragraph.createRun();
-                    run.setText(line);
-                    run.setFontFamily("宋体");
-                    run.setFontSize(12); // 小四号字体
+                    applyInlineStyles(paragraph, line.trim(), DEFAULT_FONT_SIZE);
                 }
             }
         }
@@ -472,7 +718,7 @@ public class DynamicWordDocumentCreator {
      */
     private static void createChartInDocument(XWPFDocument document, String chartTitle, String echartsConfig) throws IOException, InvalidFormatException {
         // 根据ECharts配置创建相应类型的图表
-        XWPFChart chart = createChartBasedOnEChartsConfig(document, chartTitle, echartsConfig);
+        createChartBasedOnEChartsConfig(document, chartTitle, echartsConfig);
 
         // 注意：document.createChart() 已经自动将图表添加到文档中
         // 不需要手动创建段落或run来关联图表

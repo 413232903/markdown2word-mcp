@@ -117,11 +117,12 @@ public class PoiWordGenerator {
                             replaceRun.setText(prevText.toString(), 0);
                         } else if (value instanceof WordParam.Image image) {
                             replaceRun.setText(prevText.toString(), 0);
-                            key.append(".jpg");
+                            String placeholderKey = key.toString();
+                            String imageFileName = placeholderKey + "." + image.getFileExtension();
                             replaceRun.addPicture(
                                     image.getInputStream(),
-                                    Document.PICTURE_TYPE_JPEG,
-                                    key.toString(),
+                                    image.getPictureType(),
+                                    imageFileName,
                                     image.getWidth(),
                                     image.getHeight()
                             );
@@ -159,6 +160,7 @@ public class PoiWordGenerator {
         
         // 设置表格宽度为页面宽度,100%表示页面宽度
         table.setWidth("100%");
+        table.setCellMargins(100, 180, 100, 180);
 
         // 填充表格数据
         for (int i = 0; i < tableData.size(); i++) {
@@ -191,10 +193,21 @@ public class PoiWordGenerator {
             for (int j = 0; j < rowData.size(); j++) {
                 XWPFTableCell cell = row.getCell(j);
                 if (cell != null) {
-                    cell.setText(rowData.get(j));
-                    
-                    // 设置单元格居中对齐
-                    cell.getParagraphs().get(0).setAlignment(ParagraphAlignment.CENTER);
+                    cell.removeParagraph(0);
+                    XWPFParagraph cellParagraph = cell.addParagraph();
+                    cellParagraph.setAlignment(i == 0 ? ParagraphAlignment.CENTER : ParagraphAlignment.LEFT);
+                    cellParagraph.setSpacingAfter(0);
+                    cellParagraph.setSpacingBefore(0);
+
+                    XWPFRun cellRun = cellParagraph.createRun();
+                    cellRun.setText(rowData.get(j));
+                    cellRun.setFontFamily("宋体");
+                    cellRun.setFontSize(i == 0 ? 12 : 11);
+                    if (i == 0) {
+                        cellRun.setBold(true);
+                    }
+
+                    cell.setVerticalAlignment(XWPFTableCell.XWPFVertAlign.CENTER);
                 }
             }
         }
