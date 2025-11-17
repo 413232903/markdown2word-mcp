@@ -83,12 +83,12 @@ nohup java -jar md2doc-service/target/md2doc-service-1.0.jar > logs/mcp-server.l
 curl http://localhost:8080/actuator/health
 
 # 检查 MCP 端点
-curl -N -H "Accept: text/event-stream" http://localhost:8080/mcp/messages
+curl -N -H "Accept: text/event-stream" http://localhost:8080/dataReport/md2doc
 ```
 
 服务默认运行在:
 - REST API: `http://localhost:8080`
-- MCP SSE 端点: `http://localhost:8080/mcp/messages`
+- MCP SSE 端点: `http://localhost:8080/dataReport/md2doc`
 
 ---
 
@@ -182,7 +182,8 @@ spring:
         version: "1.0"
         instructions: Markdown to Word Document Conversion MCP Server
         type: SYNC
-        sse-message-endpoint: /mcp/messages
+        sse-endpoint: /dataReport/md2doc
+        sse-message-endpoint: /dataReport/mcp/message
 
 logging:
   level:
@@ -377,7 +378,7 @@ sudo certbot --nginx -d your-domain.com
       "args": [
         "-N",
         "-H", "Accept: text/event-stream",
-        "http://your-server-ip:8080/mcp/messages"
+        "http://your-server-ip:8080/dataReport/md2doc"
       ]
     }
   }
@@ -394,7 +395,7 @@ sudo certbot --nginx -d your-domain.com
       "args": [
         "-N",
         "-H", "Accept: text/event-stream",
-        "https://your-domain.com/mcp/messages"
+        "https://your-domain.com/dataReport/md2doc"
       ]
     }
   }
@@ -404,8 +405,8 @@ sudo certbot --nginx -d your-domain.com
 ### 其他 MCP 客户端
 
 对于支持 SSE 的 MCP 客户端,直接连接到:
-- 本地: `http://localhost:8080/mcp/messages`
-- 远程: `https://your-domain.com/mcp/messages`
+- 本地: `http://localhost:8080/dataReport/md2doc`
+- 远程: `https://your-domain.com/dataReport/md2doc`
 
 ---
 
@@ -429,7 +430,7 @@ curl -X POST http://localhost:8080/api/markdown/convert/text \
 ```bash
 # 测试 SSE 端点
 curl -N -H "Accept: text/event-stream" \
-  http://localhost:8080/mcp/messages
+  http://localhost:8080/dataReport/md2doc
 ```
 
 应该看到 SSE 连接建立并保持打开。
@@ -517,7 +518,7 @@ sudo journalctl -u md2doc-mcp -n 100
 
 # 测试 SSE 端点
 curl -v -N -H "Accept: text/event-stream" \
-  http://localhost:8080/mcp/messages
+  http://localhost:8080/dataReport/md2doc
 ```
 
 ### 问题 4: 内存不足

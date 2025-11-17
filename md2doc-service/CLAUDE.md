@@ -176,7 +176,7 @@ curl -X POST "http://localhost:8080/api/markdown/convert/text" \
 
 MCP 服务器配置位于 `application.yml`:
 - **传输方式**: HTTP SSE (Server-Sent Events)
-- **端点路径**: `/md2doc`
+- **端点路径**: `/dataReport/md2doc`
 - **超时设置**: 30分钟
 - **心跳间隔**: 30秒
 
@@ -186,7 +186,7 @@ MCP 服务器配置位于 `application.yml`:
 ```bash
 mvn spring-boot:run
 ```
-MCP 端点: `http://localhost:8080/md2doc`
+MCP 端点: `http://localhost:8080/dataReport/md2doc`
 
 #### 2. 配置 MCP 客户端
 
@@ -199,7 +199,7 @@ MCP 端点: `http://localhost:8080/md2doc`
       "args": [
         "-N",
         "-H", "Accept: text/event-stream",
-        "http://localhost:8080/md2doc"
+        "http://localhost:8080/dataReport/md2doc"
       ],
       "type": "sse"
     }
@@ -209,7 +209,7 @@ MCP 端点: `http://localhost:8080/md2doc`
 
 #### 3. 测试 MCP 连接
 
-使用任何 MCP 客户端连接到 `http://localhost:8080/md2doc`。
+使用任何 MCP 客户端连接到 `http://localhost:8080/dataReport/md2doc`。
 
 服务器信息：
 - Name: `md2doc-mcp-server`
