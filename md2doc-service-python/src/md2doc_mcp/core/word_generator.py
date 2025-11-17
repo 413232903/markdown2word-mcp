@@ -16,6 +16,39 @@ from ..models.word_params import WordParams, TextParam, TableParam, ImageParam
 from ..models.chart_table import ChartTable
 
 
+def format_number_with_thousands_separator(text: str) -> str:
+    """格式化文本中的数字，添加千分符号
+    
+    例如：1000 -> 1,000，1234567 -> 1,234,567
+    
+    Args:
+        text: 输入文本
+        
+    Returns:
+        格式化后的文本
+    """
+    # 匹配整数和小数的正则表达式
+    # 匹配整数：\d+（一个或多个数字）
+    # 匹配小数：\d+\.\d+（数字.数字）
+    def replace_number(match):
+        number_str = match.group(0)
+        # 如果是小数，分别处理整数部分和小数部分
+        if '.' in number_str:
+            integer_part, decimal_part = number_str.split('.')
+            # 格式化整数部分
+            formatted_integer = format(int(integer_part), ',')
+            return f"{formatted_integer}.{decimal_part}"
+        else:
+            # 格式化整数
+            return format(int(number_str), ',')
+    
+    # 匹配数字（包括整数和小数）
+    # \d+ 匹配一个或多个数字
+    # (\.\d+)? 可选的小数部分
+    pattern = r'\d+(\.\d+)?'
+    return re.sub(pattern, replace_number, text)
+
+
 class PoiWordGenerator:
     """Word 文档生成器
     
@@ -115,10 +148,13 @@ class PoiWordGenerator:
         # 清空段落内容
         paragraph.clear()
         
+        # 格式化数字，添加千分符号
+        formatted_text = format_number_with_thousands_separator(replacement)
+        
         # 添加新文本
-        run = paragraph.add_run(replacement)
-        run.font.name = '宋体'
-        run.font.size = Pt(12)
+        run = paragraph.add_run(formatted_text)
+        run.font.name = '仿宋'
+        run.font.size = Pt(14)  # 四号字体
     
     @staticmethod
     def _replace_with_table(paragraph, placeholder: str, table_data: List[List[str]]) -> None:
@@ -208,17 +244,18 @@ class PoiWordGenerator:
                 r = OxmlElement('w:r')
                 rPr = OxmlElement('w:rPr')
                 font = OxmlElement('w:rFonts')
-                font.set(qn('w:ascii'), '宋体')
-                font.set(qn('w:hAnsi'), '宋体')
-                font.set(qn('w:eastAsia'), '宋体')
+                font.set(qn('w:ascii'), '仿宋')
+                font.set(qn('w:hAnsi'), '仿宋')
+                font.set(qn('w:eastAsia'), '仿宋')
                 rPr.append(font)
                 sz = OxmlElement('w:sz')
-                sz.set(qn('w:val'), '24')  # 12pt
+                sz.set(qn('w:val'), '22')  # 11pt (11号字体)
                 rPr.append(sz)
                 r.append(rPr)
                 
                 t = OxmlElement('w:t')
-                t.text = cell_data
+                # 格式化数字，添加千分符号
+                t.text = format_number_with_thousands_separator(cell_data)
                 r.append(t)
                 p.append(r)
                 
@@ -377,7 +414,7 @@ class PoiWordGenerator:
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         title_run = paragraph.add_run(f"【图表】{chart_table.title}")
         title_run.bold = True
-        title_run.font.name = '宋体'
+        title_run.font.name = '仿宋'
         title_run.font.size = Pt(14)
         title_run.font.color.rgb = None  # 使用默认颜色
 
@@ -489,14 +526,14 @@ class PoiWordGenerator:
 
                 # 设置字体
                 font = OxmlElement('w:rFonts')
-                font.set(qn('w:ascii'), '宋体')
-                font.set(qn('w:hAnsi'), '宋体')
-                font.set(qn('w:eastAsia'), '宋体')
+                font.set(qn('w:ascii'), '仿宋')
+                font.set(qn('w:hAnsi'), '仿宋')
+                font.set(qn('w:eastAsia'), '仿宋')
                 rPr.append(font)
 
-                # 设置字号
+                # 设置字号 - 统一使用11号字体
                 sz = OxmlElement('w:sz')
-                sz.set(qn('w:val'), '22' if i == 0 else '20')  # 表头稍大
+                sz.set(qn('w:val'), '22')  # 11pt (11号字体)
                 rPr.append(sz)
 
                 # 表头使用白色加粗字体
@@ -510,7 +547,8 @@ class PoiWordGenerator:
                 r.append(rPr)
 
                 t = OxmlElement('w:t')
-                t.text = cell_data
+                # 格式化数字，添加千分符号
+                t.text = format_number_with_thousands_separator(cell_data)
                 r.append(t)
                 p.append(r)
 

@@ -15,6 +15,35 @@ from docx.oxml import parse_xml
 from ..parser.markdown_parser import MarkdownParser
 
 
+def format_number_with_thousands_separator(text: str) -> str:
+    """格式化文本中的数字，添加千分符号
+    
+    例如：1000 -> 1,000，1234567 -> 1,234,567
+    
+    Args:
+        text: 输入文本
+        
+    Returns:
+        格式化后的文本
+    """
+    # 匹配整数和小数的正则表达式
+    def replace_number(match):
+        number_str = match.group(0)
+        # 如果是小数，分别处理整数部分和小数部分
+        if '.' in number_str:
+            integer_part, decimal_part = number_str.split('.')
+            # 格式化整数部分
+            formatted_integer = format(int(integer_part), ',')
+            return f"{formatted_integer}.{decimal_part}"
+        else:
+            # 格式化整数
+            return format(int(number_str), ',')
+    
+    # 匹配数字（包括整数和小数）
+    pattern = r'\d+(\.\d+)?'
+    return re.sub(pattern, replace_number, text)
+
+
 class HeaderNumbering:
     """标题编号管理器"""
     
@@ -56,7 +85,7 @@ class DynamicWordDocumentCreator:
     插入占位符（${title}、${chart1}、${table1}）
     设置标题样式（自定义 Heading1-6 样式）
     实现标题自动编号
-    设置段落格式（小四宋体、1.5倍行距、首行缩进2字符）
+    设置段落格式（四号仿宋、1.5倍行距、首行缩进2字符）
     """
     
     @staticmethod
@@ -79,8 +108,8 @@ class DynamicWordDocumentCreator:
         
         title_run = title_paragraph.add_run("${title}")
         title_run.bold = True
-        title_run.font.size = Pt(22)  # 二号字体
-        title_run.font.name = '宋体'
+        title_run.font.size = Pt(16)  # 三号字体
+        title_run.font.name = '仿宋'
         
         # 添加一个空行
         empty_paragraph = document.add_paragraph()
@@ -143,7 +172,7 @@ class DynamicWordDocumentCreator:
         
         # 设置字体
         font = style.font
-        font.name = '宋体'
+        font.name = '仿宋'
         font.size = Pt(font_size)
         font.bold = True
         
@@ -158,7 +187,7 @@ class DynamicWordDocumentCreator:
     
     @staticmethod
     def _set_default_paragraph_style(paragraph) -> None:
-        """设置默认段落样式 - 小四号宋体，1.5倍行距，首行缩进2字符
+        """设置默认段落样式 - 四号仿宋，1.5倍行距，首行缩进2字符
         
         Args:
             paragraph: 段落对象
@@ -215,7 +244,7 @@ class DynamicWordDocumentCreator:
                 
                 header_run = header_paragraph.add_run(f"{header_number} {title}")
                 header_run.bold = True
-                header_run.font.name = '宋体'
+                header_run.font.name = '仿宋'
 
                 # 根据标题级别设置字体大小（标准公文字号）
                 # H1: 二号(22pt), H2: 三号(16pt), H3: 四号(14pt), H4: 小四(12pt), H5-H6: 五号(10.5pt)
@@ -243,8 +272,8 @@ class DynamicWordDocumentCreator:
                 
                 chart_title_run = chart_title_paragraph.add_run(f"图表 {chart_index}：")
                 chart_title_run.bold = True
-                chart_title_run.font.name = '宋体'
-                chart_title_run.font.size = Pt(12)  # 小四号
+                chart_title_run.font.name = '仿宋'
+                chart_title_run.font.size = Pt(14)  # 四号字体
                 
                 # 创建图表占位符段落
                 chart_paragraph = document.add_paragraph()
@@ -269,8 +298,8 @@ class DynamicWordDocumentCreator:
 
                 image_title_run = image_title_paragraph.add_run(f"图片 {image_index}：{title}")
                 image_title_run.bold = True
-                image_title_run.font.name = '宋体'
-                image_title_run.font.size = Pt(12)  # 小四号
+                image_title_run.font.name = '仿宋'
+                image_title_run.font.size = Pt(14)  # 四号字体
 
                 # 创建图片占位符段落
                 image_paragraph = document.add_paragraph()
@@ -301,8 +330,8 @@ class DynamicWordDocumentCreator:
                 
                 table_title_run = table_title_paragraph.add_run(f"表格 {table_index}：")
                 table_title_run.bold = True
-                table_title_run.font.name = '宋体'
-                table_title_run.font.size = Pt(12)  # 小四号
+                table_title_run.font.name = '仿宋'
+                table_title_run.font.size = Pt(14)  # 四号字体
                 
                 table_paragraph = document.add_paragraph()
                 table_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -319,9 +348,11 @@ class DynamicWordDocumentCreator:
                 paragraph = document.add_paragraph()
                 DynamicWordDocumentCreator._set_default_paragraph_style(paragraph)
                 
-                run = paragraph.add_run(line)
-                run.font.name = '宋体'
-                run.font.size = Pt(12)  # 小四号字体
+                # 格式化数字，添加千分符号
+                formatted_line = format_number_with_thousands_separator(line)
+                run = paragraph.add_run(formatted_line)
+                run.font.name = '仿宋'
+                run.font.size = Pt(14)  # 四号字体
             
             i += 1
     
