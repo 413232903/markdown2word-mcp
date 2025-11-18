@@ -44,8 +44,46 @@ def format_number_with_thousands_separator(text: str) -> str:
     return re.sub(pattern, replace_number, text)
 
 
+def number_to_chinese(num: int) -> str:
+    """将数字转换为中文数字
+    
+    Args:
+        num: 数字 (1-99)
+        
+    Returns:
+        中文数字字符串，如 "一"、"二"、"十"、"十一" 等
+    """
+    if num <= 0 or num > 99:
+        return str(num)
+    
+    # 基本数字映射
+    chinese_digits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+    
+    if num < 10:
+        return chinese_digits[num]
+    elif num == 10:
+        return '十'
+    elif num < 20:
+        return '十' + chinese_digits[num % 10]
+    elif num < 100:
+        tens = num // 10
+        ones = num % 10
+        if ones == 0:
+            return chinese_digits[tens] + '十'
+        else:
+            return chinese_digits[tens] + '十' + chinese_digits[ones]
+    else:
+        return str(num)
+
+
 class HeaderNumbering:
-    """标题编号管理器"""
+    """标题编号管理器
+    
+    支持多级标题编号：
+    - 一级标题：一、二、三、...（中文数字）
+    - 二级标题：1、2、3、...（阿拉伯数字）
+    - 三级标题：1）、2）、3）、...（阿拉伯数字+右括号）
+    """
     
     def __init__(self):
         self.number_stack = []
@@ -69,13 +107,47 @@ class HeaderNumbering:
             self.number_stack.pop()
         self.number_stack.append(self.level_counters[level])
     
-    def get_number(self) -> str:
-        """获取当前编号
+    def get_number(self, level: int = None) -> str:
+        """获取当前编号，根据级别返回不同格式
+        
+        每个级别独立编号，不显示父级编号：
+        - 一级标题：一、二、三、...
+        - 二级标题：1、2、3、...（独立编号）
+        - 三级标题：1）、2）、3）、...（独立编号）
+        
+        Args:
+            level: 标题级别 (1-6)，如果为None则根据编号栈长度判断
         
         Returns:
-            编号字符串，如 "1.2.3"
+            编号字符串：
+            - 一级标题（level=1）：一、二、三、...
+            - 二级标题（level=2）：1、2、3、...
+            - 三级标题（level=3）：1）、2）、3）、...
+            - 其他级别：使用默认格式
         """
-        return '.'.join(map(str, self.number_stack))
+        if not self.number_stack:
+            return ""
+        
+        # 如果没有指定level，根据编号栈长度判断
+        if level is None:
+            level = len(self.number_stack)
+        
+        # 根据标题级别决定格式，每个级别独立编号
+        if level == 1:
+            # 一级标题：使用中文数字，如 "一、"
+            num = self.level_counters.get(1, 0)
+            return number_to_chinese(num) + "、"
+        elif level == 2:
+            # 二级标题：使用阿拉伯数字，如 "1、"
+            num = self.level_counters.get(2, 0)
+            return str(num) + "、"
+        elif level == 3:
+            # 三级标题：使用阿拉伯数字+右括号，如 "1）"
+            num = self.level_counters.get(3, 0)
+            return str(num) + "）"
+        else:
+            # 四级及以下：使用默认格式（点号分隔）
+            return '.'.join(map(str, self.number_stack))
 
 
 class DynamicWordDocumentCreator:
@@ -237,12 +309,12 @@ class DynamicWordDocumentCreator:
                 
                 # 更新标题编号
                 header_numbering.enter_level(level)
-                header_number = header_numbering.get_number()
+                header_number = header_numbering.get_number(level)
                 
                 header_paragraph = document.add_paragraph()
                 DynamicWordDocumentCreator._set_header_style(header_paragraph, level)
                 
-                header_run = header_paragraph.add_run(f"{header_number} {title}")
+                header_run = header_paragraph.add_run(f"{header_number}{title}")
                 header_run.bold = True
                 header_run.font.name = '仿宋'
 
@@ -323,16 +395,7 @@ class DynamicWordDocumentCreator:
                     i += 1
                 i -= 1  # 回退一行，因为循环会自动增加i
                 
-                # 创建表格占位符
-                table_title_paragraph = document.add_paragraph()
-                table_title_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                DynamicWordDocumentCreator._set_default_paragraph_style(table_title_paragraph)
-                
-                table_title_run = table_title_paragraph.add_run(f"表格 {table_index}：")
-                table_title_run.bold = True
-                table_title_run.font.name = '仿宋'
-                table_title_run.font.size = Pt(14)  # 四号字体
-                
+                # 创建表格占位符（不添加表格标题）
                 table_paragraph = document.add_paragraph()
                 table_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 DynamicWordDocumentCreator._set_default_paragraph_style(table_paragraph)
