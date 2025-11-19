@@ -4,7 +4,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,6 +16,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Iterator;
+import java.util.Locale;
 
 /**
  * @ClassName ImageDownloader
@@ -44,9 +49,9 @@ public class ImageDownloader {
      * 下载或读取图片
      *
      * @param imageSource 图片来源（URL或本地路径）
-     * @return BufferedImage 对象，失败返回 null
+     * @return DownloadedImage 对象，失败返回 null
      */
-    public static BufferedImage downloadOrReadImage(String imageSource) {
+    public static DownloadedImage downloadOrReadImage(String imageSource) {
         if (imageSource == null || imageSource.trim().isEmpty()) {
             logger.warn("图片来源为空");
             return null;
@@ -72,7 +77,7 @@ public class ImageDownloader {
     /**
      * 从 URL 下载图片
      */
-    private static BufferedImage downloadImageFromUrl(String imageUrl) {
+    private static DownloadedImage downloadImageFromUrl(String imageUrl) {
         logger.info("开始下载网络图片: {}", imageUrl);
         HttpURLConnection connection = null;
 
@@ -91,13 +96,18 @@ public class ImageDownloader {
             }
 
             try (InputStream inputStream = connection.getInputStream()) {
-                BufferedImage image = ImageIO.read(inputStream);
-                if (image == null) {
+                byte[] imageBytes = readAllBytes(inputStream);
+                if (imageBytes == null || imageBytes.length == 0) {
+                    logger.error("图片内容为空: {}", imageUrl);
+                    return null;
+                }
+                DownloadedImage downloadedImage = createDownloadedImage(imageBytes, imageUrl);
+                if (downloadedImage == null) {
                     logger.error("无法解析图片格式: {}", imageUrl);
                     return null;
                 }
-                logger.info("成功下载图片: {} ({}x{})", imageUrl, image.getWidth(), image.getHeight());
-                return image;
+                logger.info("成功下载图片: {} ({}x{})", imageUrl, downloadedImage.width(), downloadedImage.height());
+                return downloadedImage;
             }
 
         } catch (IOException e) {
@@ -113,7 +123,7 @@ public class ImageDownloader {
     /**
      * 读取本地图片
      */
-    private static BufferedImage readLocalImage(String imagePath) {
+    private static DownloadedImage readLocalImage(String imagePath) {
         logger.info("开始读取本地图片: {}", imagePath);
 
         try {
@@ -150,14 +160,20 @@ public class ImageDownloader {
                 return null;
             }
 
-            BufferedImage image = ImageIO.read(imageFile);
-            if (image == null) {
+            byte[] imageBytes = Files.readAllBytes(path);
+            if (imageBytes == null || imageBytes.length == 0) {
+                logger.error("图片内容为空: {}", path.toAbsolutePath());
+                return null;
+            }
+
+            DownloadedImage downloadedImage = createDownloadedImage(imageBytes, imageFile.getName());
+            if (downloadedImage == null) {
                 logger.error("无法解析图片: {}", path.toAbsolutePath());
                 return null;
             }
 
-            logger.info("成功读取本地图片: {} ({}x{})", imagePath, image.getWidth(), image.getHeight());
-            return image;
+            logger.info("成功读取本地图片: {} ({}x{})", imagePath, downloadedImage.width(), downloadedImage.height());
+            return downloadedImage;
 
         } catch (IOException e) {
             logger.error("读取本地图片异常: {} - {}", imagePath, e.getMessage());
@@ -242,6 +258,72 @@ public class ImageDownloader {
             return Files.exists(path) && Files.isRegularFile(path) && Files.isReadable(path);
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    private static byte[] readAllBytes(InputStream inputStream) throws IOException {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            return outputStream.toByteArray();
+        }
+    }
+
+    private static DownloadedImage createDownloadedImage(byte[] imageBytes, String sourceHint) {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
+             ImageInputStream imageInputStream = ImageIO.createImageInputStream(bais)) {
+
+            if (imageInputStream == null) {
+                logger.error("无法创建图片输入流: {}", sourceHint);
+                return null;
+            }
+
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInputStream);
+            if (!readers.hasNext()) {
+                logger.error("找不到可用的图片读取器: {}", sourceHint);
+                return null;
+            }
+
+            ImageReader reader = readers.next();
+            reader.setInput(imageInputStream, true, true);
+            int width = reader.getWidth(0);
+            int height = reader.getHeight(0);
+            String formatName = reader.getFormatName();
+            reader.dispose();
+
+            if (formatName == null || formatName.trim().isEmpty()) {
+                formatName = guessFormatFromName(sourceHint);
+            }
+
+            return new DownloadedImage(imageBytes, normalizeFormat(formatName), width, height);
+        } catch (Exception e) {
+            logger.error("解析图片失败: {} - {}", sourceHint, e.getMessage());
+            return null;
+        }
+    }
+
+    private static String guessFormatFromName(String sourceHint) {
+        if (sourceHint == null) {
+            return "png";
+        }
+        int dotIndex = sourceHint.lastIndexOf('.');
+        if (dotIndex == -1 || dotIndex == sourceHint.length() - 1) {
+            return "png";
+        }
+        return sourceHint.substring(dotIndex + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeFormat(String formatName) {
+        return formatName == null ? "png" : formatName.toLowerCase(Locale.ROOT);
+    }
+
+    public record DownloadedImage(byte[] data, String format, int width, int height) {
+
+        public ByteArrayInputStream toInputStream() {
+            return new ByteArrayInputStream(data);
         }
     }
 }

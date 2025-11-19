@@ -4,11 +4,17 @@ import cn.daydayup.dev.md2doc.core.util.ImageDownloader;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.poi.util.Units;
+import org.apache.poi.xwpf.usermodel.Document;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * @ClassName WordParam
@@ -23,18 +29,6 @@ public sealed interface WordParam {
         return new Text(String.valueOf(msg));
     }
 
-    static WordParam image(InputStream inputStream, int width, int height) {
-        return new Image(inputStream, width, height);
-    }
-
-    static WordParam image(BufferedImage image) throws IOException {
-        return new Image(image);
-    }
-
-    static WordParam image(File file) throws IOException {
-        return new Image(ImageIO.read(file));
-    }
-
     /**
      * 从 URL 或本地路径创建图片参数
      * 支持自动下载网络图片和读取本地图片
@@ -44,9 +38,9 @@ public sealed interface WordParam {
      */
     static WordParam image(String imageSource) {
         try {
-            BufferedImage bufferedImage = ImageDownloader.downloadOrReadImage(imageSource);
-            if (bufferedImage != null) {
-                return new Image(bufferedImage);
+            ImageDownloader.DownloadedImage downloadedImage = ImageDownloader.downloadOrReadImage(imageSource);
+            if (downloadedImage != null) {
+                return Image.fromDownloaded(downloadedImage, imageSource);
             } else {
                 // 下载/读取失败，返回占位符文本
                 return imagePlaceholder(imageSource, "图片加载失败");
@@ -54,6 +48,26 @@ public sealed interface WordParam {
         } catch (Exception e) {
             return imagePlaceholder(imageSource, "图片处理异常: " + e.getMessage());
         }
+    }
+
+    static WordParam image(BufferedImage image) throws IOException {
+        return Image.fromBufferedImage(image, "png");
+    }
+
+    static WordParam image(File file) throws IOException {
+        BufferedImage bufferedImage = ImageIO.read(file);
+        if (bufferedImage == null) {
+            throw new IOException("无法读取图片文件: " + file.getAbsolutePath());
+        }
+        return Image.fromBufferedImage(bufferedImage, detectFormatByName(file.getName()));
+    }
+
+    private static String detectFormatByName(String fileName) {
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex == -1 || dotIndex == fileName.length() - 1) {
+            return "png";
+        }
+        return fileName.substring(dotIndex + 1).toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -80,30 +94,83 @@ public sealed interface WordParam {
     }
 
     @Getter
-    @AllArgsConstructor
     final class Image implements WordParam {
-        private final InputStream inputStream;
+        private final byte[] data;
         private final int width;
         private final int height;
+        private final int pictureType;
+        private final String fileExtension;
 
-        public Image(BufferedImage bufferedImage) throws IOException {
-            this.inputStream = toInputStream(bufferedImage);
-
-            // 使用自适应尺寸计算
-            int[] adaptiveSize = ImageDownloader.calculateAdaptiveSize(
-                    bufferedImage.getWidth(),
-                    bufferedImage.getHeight()
-            );
-
-            // 修复: 使用 pixelToEMU 而不是 toEMU (toEMU 是用于 points 而不是 pixels)
+        private Image(byte[] data, int originalWidth, int originalHeight, String format, int pictureType) {
+            this.data = data;
+            int[] adaptiveSize = ImageDownloader.calculateAdaptiveSize(originalWidth, originalHeight);
             this.width = Units.pixelToEMU(adaptiveSize[0]);
             this.height = Units.pixelToEMU(adaptiveSize[1]);
+            this.pictureType = pictureType;
+            this.fileExtension = format;
         }
 
-        private static InputStream toInputStream(BufferedImage image) throws IOException {
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            ImageIO.write(image, "jpg", os);
-            return new ByteArrayInputStream(os.toByteArray());
+        public static Image fromDownloaded(ImageDownloader.DownloadedImage downloadedImage, String imageSource) throws IOException {
+            String format = normalizeFormat(downloadedImage.format());
+            int pictureType = resolvePictureType(format);
+            byte[] data = downloadedImage.data();
+            int originalWidth = downloadedImage.width();
+            int originalHeight = downloadedImage.height();
+
+            if (pictureType == -1) {
+                // 不支持的格式，转换为 PNG
+                BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(downloadedImage.data()));
+                if (bufferedImage == null) {
+                    throw new IOException("无法解析图片用于转换");
+                }
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write(bufferedImage, "png", baos);
+                data = baos.toByteArray();
+                format = "png";
+                pictureType = Document.PICTURE_TYPE_PNG;
+                originalWidth = bufferedImage.getWidth();
+                originalHeight = bufferedImage.getHeight();
+            }
+
+            return new Image(data, originalWidth, originalHeight, format, pictureType);
+        }
+
+        public static Image fromBufferedImage(BufferedImage bufferedImage, String preferredFormat) throws IOException {
+            if (bufferedImage == null) {
+                throw new IOException("BufferedImage 为空");
+            }
+            String format = preferredFormat != null ? preferredFormat : "png";
+            int pictureType = resolvePictureType(format);
+            if (pictureType == -1) {
+                format = "png";
+                pictureType = Document.PICTURE_TYPE_PNG;
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(bufferedImage, format, baos);
+            return new Image(baos.toByteArray(), bufferedImage.getWidth(), bufferedImage.getHeight(), format, pictureType);
+        }
+
+        public InputStream getInputStream() {
+            return new ByteArrayInputStream(data);
+        }
+
+        public String getFileExtension() {
+            return fileExtension;
+        }
+
+        private static String normalizeFormat(String format) {
+            return format == null ? "png" : format.toLowerCase(Locale.ROOT);
+        }
+
+        private static int resolvePictureType(String format) {
+            return switch (format.toLowerCase(Locale.ROOT)) {
+                case "jpg", "jpeg" -> Document.PICTURE_TYPE_JPEG;
+                case "png" -> Document.PICTURE_TYPE_PNG;
+                case "gif" -> Document.PICTURE_TYPE_GIF;
+                case "bmp" -> Document.PICTURE_TYPE_BMP;
+                case "dib" -> Document.PICTURE_TYPE_DIB;
+                default -> -1;
+            };
         }
     }
 

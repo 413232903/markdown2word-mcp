@@ -105,6 +105,13 @@ public static void main(String[] args) throws Exception {
 
 ~~3. 标题序号缺失、标题格式缺失，不能自动列出目录；（已解决）~~
 
+## 更新记录
+
+- **2025-11-08**：MCP 工具现在会返回可直接下载的 Word 链接，不再需要手动解码 Base64；新增配置 `md2doc.download-base-url` 用于控制外部访问地址；增加 `md2doc.temp-file-retention-days` 配置，用于控制临时目录中文件的保留天数（默认 10 天），系统会在每天凌晨自动清理过期文件。
+- **2025-11-08**：MCP 返回结果新增 `files` 字段，自动携带 Word 下载链接，适配 Dify 等需要文件列表的工作流平台。
+- **2025-11-09**：修复网络图片在 Word 中丢失的问题，统一按照图片原格式写入；增强 Markdown 内联语法和列表渲染，`**粗体**`、`__粗体__`、`_斜体_`、行内代码及 Markdown 列表可正确呈现；放宽表格解析并调整 Word 表格宽度和单元格边距，改善阅读体验。
+- **2025-11-18**：MCP 工具返回格式优化，直接返回文件下载 URL 字符串，简化调用方式。
+
 ## 路由冲突排查与优化
 
 在将多个 MCP 服务统一映射到一个公网域名时，最常见的故障是**网关层转发的路径与服务端真正监听的路径不一致**。本项目的 MCP SSE 端点默认写死为 `/dataReport/md2doc`，当网关 (Nginx、API Gateway 等) 再包一层前缀（例如 `/ai-tools/dataReport/md2doc`）或已有别的服务占用了 `/dataReport/md2doc` 时，后端收到的请求路径就会变成别的值，从而返回 404 或被错误的服务处理。
@@ -130,3 +137,10 @@ public static void main(String[] args) throws Exception {
 落地建议：
 - 先在测试环境验证改写或端点调整是否正常握手 (使用 `curl -N -H "Accept: text/event-stream" <URL>` 测试 SSE)。
 - 调整后及时更新部署文档与客户端配置文件，避免团队成员继续使用旧地址。
+
+## 开发小结与改进建议
+
+- 本次改动把临时文件目录复用为下载目录，避免重复写入文件，整体性能稳定。
+- 下载链接依赖于运行环境的基础 URL，建议在部署时按实际域名或 IP 设置 `md2doc.download-base-url`，防止默认的 `http://localhost:8080` 影响外网访问。
+- 临时文件已加入定时清理机制，若需要更长的保留时间，可调整 `md2doc.temp-file-retention-days`。
+- Markdown 转换链路新增图片格式自适应与列表、表格优化，生成的 Word 文档样式更接近原始排版；后续可考虑加入更多 Markdown 扩展语法（如任务列表、引用）以提升兼容度。

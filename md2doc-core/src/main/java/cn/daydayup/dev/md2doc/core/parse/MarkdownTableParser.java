@@ -35,10 +35,11 @@ public class MarkdownTableParser {
                 line = line.substring(0, line.length() - 1);
             }
 
-            String[] cells = line.split("\\|");
+            String[] cells = line.split("\\|", -1);
             List<String> row = new ArrayList<>();
             for (String cell : cells) {
-                row.add(cell.trim());
+                String cleaned = cell.trim();
+                row.add(cleaned);
             }
             // 只有当行不为空时才添加到表格数据中
             if (!row.isEmpty() && !(row.size() == 1 && row.get(0).isEmpty())) {

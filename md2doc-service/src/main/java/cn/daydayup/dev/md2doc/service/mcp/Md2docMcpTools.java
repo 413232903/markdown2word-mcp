@@ -27,8 +27,8 @@ public class Md2docMcpTools {
     @Autowired
     private MarkdownConversionService markdownConversionService;
 
-    @Value("${server.base-url:http://localhost:8080}")
-    private String serverBaseUrl;
+    @Value("${md2doc.download-base-url:http://localhost:8080}")
+    private String downloadBaseUrl;
 
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir") + "/md2doc/";
 
@@ -58,7 +58,7 @@ public class Md2docMcpTools {
                 }
 
                 // 构造文件访问URL并直接返回
-                String fileUrl = serverBaseUrl + "/api/markdown/files/" + fileName + ".docx";
+                String fileUrl = buildDownloadUrl(fileName + ".docx");
                 return fileUrl;
 
             } catch (Exception e) {
@@ -104,7 +104,7 @@ public class Md2docMcpTools {
                 }
 
                 // 构造文件访问URL并直接返回
-                String fileUrl = serverBaseUrl + "/api/markdown/files/" + fileName + ".docx";
+                String fileUrl = buildDownloadUrl(fileName + ".docx");
                 return fileUrl;
 
             } catch (Exception e) {
@@ -190,5 +190,15 @@ public class Md2docMcpTools {
         public String chartExample;
         public String tableExample;
         public String imageExample;
+    }
+
+    /**
+     * 构建文件下载URL
+     */
+    private String buildDownloadUrl(String fileName) {
+        String normalizedBaseUrl = downloadBaseUrl.endsWith("/")
+            ? downloadBaseUrl.substring(0, downloadBaseUrl.length() - 1)
+            : downloadBaseUrl;
+        return normalizedBaseUrl + "/api/markdown/files/" + fileName;
     }
 }
