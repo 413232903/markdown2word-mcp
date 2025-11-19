@@ -1,13 +1,6 @@
 server:
   port: 8080
 
-# md2doc 配置
-md2doc:
-  # 下载基础URL，用于生成文件访问链接（可通过环境变量 MD2DOC_DOWNLOAD_BASE_URL 覆盖）
-  download-base-url: ${MD2DOC_DOWNLOAD_BASE_URL:http://localhost:8080}
-  # 临时文件保留天数（默认10天）
-  temp-file-retention-days: 10
-
 spring:
   application:
     name: md2doc-service
@@ -32,8 +25,11 @@ spring:
           sse:
             enabled: true
 
+# md2doc 配置
 md2doc:
-  download-base-url: http://192.9.253.106:8080
+  # 下载基础URL，用于生成文件访问链接（可通过环境变量 MD2DOC_DOWNLOAD_BASE_URL 覆盖）
+  download-base-url: ${MD2DOC_DOWNLOAD_BASE_URL:http://192.9.253.106:8080}
+  # 临时文件保留天数（默认10天）
   temp-file-retention-days: 10
 
 # 日志配置
