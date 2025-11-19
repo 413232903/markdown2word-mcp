@@ -1,64 +1,27 @@
 package cn.daydayup.dev.md2doc.service.mcp;
 
 import org.springframework.ai.tool.execution.ToolCallResultConverter;
-import org.springframework.ai.util.json.JsonParser;
-import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
- * 将 md2doc MCP 的转换结果格式化为包含 files 字段的标准响应，
- * 便于 Dify 等平台直接识别并渲染下载链接。
+ * MCP 工具结果转换器
+ * 
+ * 当前版本：工具直接返回 String URL，转换器直接返回原始字符串，不进行任何包装。
+ * 这样可以确保 MCP 返回的内容是纯字符串类型的 URL。
  */
 public class Md2docToolResultConverter implements ToolCallResultConverter {
 
-    private static final String WORD_MIME_TYPE =
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-
     @Override
     public String convert(Object result, Type toolReturnType) {
-        Map<String, Object> payload = new LinkedHashMap<>();
-
-        if (result instanceof Md2docMcpTools.ConvertResponse convertResponse) {
-            payload.put("success", convertResponse.success);
-            payload.put("text", buildTextMessage(convertResponse));
-            payload.put("files", buildFiles(convertResponse));
-            payload.put("error", convertResponse.error);
-        } else {
-            // 回退到默认字段，确保不会丢失原始信息
-            payload.put("success", true);
-            payload.put("text", result != null ? result.toString() : "");
-            payload.put("files", List.of());
+        // 如果结果是 String 类型（URL），直接返回原始字符串，不进行任何转换
+        if (result instanceof String) {
+            return (String) result;
         }
-
-        return JsonParser.toJson(payload);
+        
+        // 对于其他类型，转换为字符串
+        return result != null ? result.toString() : "";
     }
 
-    private String buildTextMessage(Md2docMcpTools.ConvertResponse response) {
-        if (StringUtils.hasText(response.message)) {
-            return response.message;
-        }
-        return response.success ? "转换成功" : "转换失败";
-    }
-
-    private List<Map<String, Object>> buildFiles(Md2docMcpTools.ConvertResponse response) {
-        if (!response.success || !StringUtils.hasText(response.downloadUrl)) {
-            return List.of();
-        }
-
-        Map<String, Object> fileEntry = new LinkedHashMap<>();
-        fileEntry.put("name", response.fileName);
-        fileEntry.put("url", response.downloadUrl);
-        fileEntry.put("size", response.fileSize);
-        fileEntry.put("mimeType", WORD_MIME_TYPE);
-
-        List<Map<String, Object>> files = new ArrayList<>();
-        files.add(fileEntry);
-        return files;
-    }
 }
 
