@@ -49,6 +49,34 @@ def format_number_with_thousands_separator(text: str) -> str:
     return re.sub(pattern, replace_number, text)
 
 
+def format_table_number(text: str) -> str:
+    """格式化表格中的数字，添加千分符号并去掉小数位
+    
+    例如：1000.5 -> 1,001，1234.56 -> 1,235，1000 -> 1,000
+    
+    Args:
+        text: 输入文本
+        
+    Returns:
+        格式化后的文本（小数四舍五入为整数）
+    """
+    def replace_number(match):
+        number_str = match.group(0)
+        try:
+            # 转换为浮点数，然后四舍五入为整数
+            num = float(number_str)
+            rounded_num = round(num)
+            # 格式化为带千分符号的整数
+            return format(int(rounded_num), ',')
+        except ValueError:
+            # 如果转换失败，返回原字符串
+            return number_str
+    
+    # 匹配数字（包括整数和小数）
+    pattern = r'\d+(\.\d+)?'
+    return re.sub(pattern, replace_number, text)
+
+
 class PoiWordGenerator:
     """Word 文档生成器
     
@@ -254,8 +282,8 @@ class PoiWordGenerator:
                 r.append(rPr)
                 
                 t = OxmlElement('w:t')
-                # 格式化数字，添加千分符号
-                t.text = format_number_with_thousands_separator(cell_data)
+                # 格式化表格数字，添加千分符号并去掉小数位
+                t.text = format_table_number(cell_data)
                 r.append(t)
                 p.append(r)
                 
@@ -547,8 +575,8 @@ class PoiWordGenerator:
                 r.append(rPr)
 
                 t = OxmlElement('w:t')
-                # 格式化数字，添加千分符号
-                t.text = format_number_with_thousands_separator(cell_data)
+                # 格式化表格数字，添加千分符号并去掉小数位
+                t.text = format_table_number(cell_data)
                 r.append(t)
                 p.append(r)
 
