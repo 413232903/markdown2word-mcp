@@ -154,7 +154,7 @@ class PoiWordGenerator:
         # 添加新文本
         run = paragraph.add_run(formatted_text)
         run.font.name = '仿宋'
-        run.font.size = Pt(14)  # 四号字体
+        run.font.size = Pt(12)  # 小四号字体
     
     @staticmethod
     def _replace_with_table(paragraph, placeholder: str, table_data: List[List[str]]) -> None:

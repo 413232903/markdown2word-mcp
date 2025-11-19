@@ -201,7 +201,7 @@ public class PoiWordGenerator {
 
                     XWPFRun cellRun = cellParagraph.createRun();
                     cellRun.setText(rowData.get(j));
-                    cellRun.setFontFamily("宋体");
+                    cellRun.setFontFamily("仿宋");
                     cellRun.setFontSize(i == 0 ? 12 : 11);
                     if (i == 0) {
                         cellRun.setBold(true);

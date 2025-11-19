@@ -83,11 +83,12 @@ class HeaderNumbering:
     - 一级标题：一、二、三、...（中文数字）
     - 二级标题：1、2、3、...（阿拉伯数字）
     - 三级标题：1）、2）、3）、...（阿拉伯数字+右括号）
+    
+    编号逻辑：每个级别在父级别下独立编号
     """
     
     def __init__(self):
-        self.number_stack = []
-        self.level_counters = {}
+        self.level_counters = {}  # 存储每个级别的计数器
     
     def enter_level(self, level: int) -> None:
         """进入指定级别的标题
@@ -95,59 +96,51 @@ class HeaderNumbering:
         Args:
             level: 标题级别 (1-6)
         """
-        # 重置更深级别的计数器
+        # 重置更深级别的计数器（当进入新的一级标题时，下级标题计数器重置）
         for i in range(level + 1, 7):
             self.level_counters[i] = 0
         
         # 增加当前级别的计数器
         self.level_counters[level] = self.level_counters.get(level, 0) + 1
-        
-        # 更新栈
-        while len(self.number_stack) >= level:
-            self.number_stack.pop()
-        self.number_stack.append(self.level_counters[level])
     
-    def get_number(self, level: int = None) -> str:
+    def get_number(self, level: int) -> str:
         """获取当前编号，根据级别返回不同格式
         
-        每个级别独立编号，不显示父级编号：
+        编号格式：
         - 一级标题：一、二、三、...
-        - 二级标题：1、2、3、...（独立编号）
-        - 三级标题：1）、2）、3）、...（独立编号）
+        - 二级标题：1、2、3、...（在当前一级标题下独立编号）
+        - 三级标题：1）、2）、3）、...（在当前二级标题下独立编号）
+        - 四级及以下：使用点号分隔的层级编号
         
         Args:
-            level: 标题级别 (1-6)，如果为None则根据编号栈长度判断
+            level: 标题级别 (1-6)
         
         Returns:
-            编号字符串：
-            - 一级标题（level=1）：一、二、三、...
-            - 二级标题（level=2）：1、2、3、...
-            - 三级标题（level=3）：1）、2）、3）、...
-            - 其他级别：使用默认格式
+            编号字符串
         """
-        if not self.number_stack:
+        if level not in self.level_counters or self.level_counters[level] == 0:
             return ""
         
-        # 如果没有指定level，根据编号栈长度判断
-        if level is None:
-            level = len(self.number_stack)
-        
-        # 根据标题级别决定格式，每个级别独立编号
+        # 根据标题级别决定格式
         if level == 1:
             # 一级标题：使用中文数字，如 "一、"
             num = self.level_counters.get(1, 0)
-            return number_to_chinese(num) + "、"
+            return number_to_chinese(num) + "、" if num > 0 else ""
         elif level == 2:
             # 二级标题：使用阿拉伯数字，如 "1、"
             num = self.level_counters.get(2, 0)
-            return str(num) + "、"
+            return str(num) + "、" if num > 0 else ""
         elif level == 3:
             # 三级标题：使用阿拉伯数字+右括号，如 "1）"
             num = self.level_counters.get(3, 0)
-            return str(num) + "）"
+            return str(num) + "）" if num > 0 else ""
         else:
-            # 四级及以下：使用默认格式（点号分隔）
-            return '.'.join(map(str, self.number_stack))
+            # 四级及以下：使用点号分隔的层级编号，如 "1.1.1"
+            parts = []
+            for i in range(1, level + 1):
+                if i in self.level_counters and self.level_counters[i] > 0:
+                    parts.append(str(self.level_counters[i]))
+            return '.'.join(parts) + "、"
 
 
 class DynamicWordDocumentCreator:
@@ -259,7 +252,7 @@ class DynamicWordDocumentCreator:
     
     @staticmethod
     def _set_default_paragraph_style(paragraph) -> None:
-        """设置默认段落样式 - 四号仿宋，1.5倍行距，首行缩进2字符
+        """设置默认段落样式 - 小四号仿宋，1.5倍行距，首行缩进2字符
         
         Args:
             paragraph: 段落对象
@@ -415,7 +408,7 @@ class DynamicWordDocumentCreator:
                 formatted_line = format_number_with_thousands_separator(line)
                 run = paragraph.add_run(formatted_line)
                 run.font.name = '仿宋'
-                run.font.size = Pt(14)  # 四号字体
+                run.font.size = Pt(12)  # 小四号字体
             
             i += 1
     

@@ -201,13 +201,10 @@ public class MarkdownToWordConverter {
      * @param markdownContent Markdown内容
      */
     private void processTextContent(WordParams params, String markdownContent) {
-        // 提取标题作为文档标题
-        Matcher headerMatcher = HEADER_PATTERN.matcher(markdownContent);
-        if (headerMatcher.find()) {
-            params.setText("title", headerMatcher.group(2));
-        } else {
-            params.setText("title", "默认标题");
-        }
+        // 生成文档标题：当前年月 + "数据分析报告"
+        java.time.LocalDate now = java.time.LocalDate.now();
+        String title = now.getYear() + "年" + now.getMonthValue() + "月数据分析报告";
+        params.setText("title", title);
 
         // 可以添加更多文本处理逻辑
         // 例如提取作者、日期等信息

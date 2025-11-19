@@ -253,12 +253,11 @@ class MarkdownToWordConverter:
             markdown_content: Markdown内容
         """
         try:
-            # 提取标题作为文档标题
-            first_header = MarkdownParser.extract_first_header(markdown_content)
-            if first_header:
-                params.set_text("title", first_header)
-            else:
-                params.set_text("title", "默认标题")
+            # 生成文档标题：当前年月 + "数据分析报告"
+            from datetime import datetime
+            now = datetime.now()
+            title = f"{now.year}年{now.month}月数据分析报告"
+            params.set_text("title", title)
             
             # 可以添加更多文本处理逻辑
             # 例如提取作者、日期等信息
@@ -266,7 +265,9 @@ class MarkdownToWordConverter:
         except Exception as e:
             print(f"处理文本内容时出错: {e}")
             # 设置默认标题
-            params.set_text("title", "默认标题")
+            from datetime import datetime
+            now = datetime.now()
+            params.set_text("title", f"{now.year}年{now.month}月数据分析报告")
     
     def get_supported_features(self) -> List[str]:
         """获取支持的功能列表

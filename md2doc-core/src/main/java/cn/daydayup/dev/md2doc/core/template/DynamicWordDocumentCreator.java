@@ -32,7 +32,7 @@ public class DynamicWordDocumentCreator {
     private static final Pattern ORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)(\\d+)\\.\\s+(.*)$");
     private static final Pattern INLINE_STYLE_PATTERN = Pattern.compile("(\\*\\*.+?\\*\\*|__.+?__|\\*[^*]+?\\*|_[^_]+?_|`[^`]+?`)");
     private static final int DEFAULT_FONT_SIZE = 12;
-    private static final String DEFAULT_FONT_FAMILY = "宋体";
+    private static final String DEFAULT_FONT_FAMILY = "仿宋";
     private static final AtomicInteger NUMBERING_SEED = new AtomicInteger(1);
 
     private static class NumberingCache {
@@ -61,13 +61,73 @@ public class DynamicWordDocumentCreator {
             numberStack.push(levelCounters.get(level));
         }
         
-        public String getNumber() {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < numberStack.size(); i++) {
-                if (i > 0) sb.append(".");
-                sb.append(numberStack.get(i));
+        /**
+         * 将数字转换为中文数字
+         * @param num 数字 (1-99)
+         * @return 中文数字字符串，如 "一"、"二"、"十"、"十一" 等
+         */
+        private String numberToChinese(int num) {
+            if (num <= 0 || num > 99) {
+                return String.valueOf(num);
             }
-            return sb.toString();
+            
+            String[] chineseDigits = {"", "一", "二", "三", "四", "五", "六", "七", "八", "九"};
+            
+            if (num < 10) {
+                return chineseDigits[num];
+            } else if (num == 10) {
+                return "十";
+            } else if (num < 20) {
+                return "十" + chineseDigits[num % 10];
+            } else if (num < 100) {
+                int tens = num / 10;
+                int ones = num % 10;
+                if (ones == 0) {
+                    return chineseDigits[tens] + "十";
+                } else {
+                    return chineseDigits[tens] + "十" + chineseDigits[ones];
+                }
+            }
+            return String.valueOf(num);
+        }
+        
+        /**
+         * 获取当前编号，根据级别返回不同格式
+         * 编号格式：
+         * - 一级标题：一、二、三、...
+         * - 二级标题：1、2、3、...（在当前一级标题下独立编号）
+         * - 三级标题：1）、2）、3）、...（在当前二级标题下独立编号）
+         * - 四级及以下：使用点号分隔的层级编号
+         * @param level 标题级别 (1-6)
+         * @return 编号字符串
+         */
+        public String getNumber(int level) {
+            int num = levelCounters.getOrDefault(level, 0);
+            if (num == 0) {
+                return "";
+            }
+            
+            // 根据标题级别决定格式
+            if (level == 1) {
+                // 一级标题：使用中文数字，如 "一、"
+                return numberToChinese(num) + "、";
+            } else if (level == 2) {
+                // 二级标题：使用阿拉伯数字，如 "1、"
+                return num + "、";
+            } else if (level == 3) {
+                // 三级标题：使用阿拉伯数字+右括号，如 "1）"
+                return num + "）";
+            } else {
+                // 四级及以下：使用点号分隔的层级编号，如 "1.1.1"
+                StringBuilder sb = new StringBuilder();
+                for (int i = 1; i <= level; i++) {
+                    if (levelCounters.containsKey(i) && levelCounters.get(i) > 0) {
+                        if (sb.length() > 0) sb.append(".");
+                        sb.append(levelCounters.get(i));
+                    }
+                }
+                return sb.toString() + "、";
+            }
         }
     }
     private static void clearFirstLineIndent(XWPFParagraph paragraph) {
@@ -297,8 +357,8 @@ public class DynamicWordDocumentCreator {
             XWPFRun titleRun = titleParagraph.createRun();
             titleRun.setText("${title}");
             titleRun.setBold(true);
-            titleRun.setFontSize(22);
-            titleRun.setFontFamily("宋体");
+            titleRun.setFontSize(16); // 三号字体
+            titleRun.setFontFamily("仿宋");
 
             // 添加一个空行
             XWPFParagraph emptyParagraph = document.createParagraph();
@@ -322,22 +382,22 @@ public class DynamicWordDocumentCreator {
         XWPFStyles styles = document.createStyles();
         
         // 创建标题1样式
-        createHeadingStyle(styles, "Heading1", 1, 22, "000000", "宋体");
+        createHeadingStyle(styles, "Heading1", 1, 22, "000000", "仿宋");
         
         // 创建标题2样式
-        createHeadingStyle(styles, "Heading2", 2, 20, "000000", "宋体");
+        createHeadingStyle(styles, "Heading2", 2, 20, "000000", "仿宋");
         
         // 创建标题3样式
-        createHeadingStyle(styles, "Heading3", 3, 18, "000000", "宋体");
+        createHeadingStyle(styles, "Heading3", 3, 18, "000000", "仿宋");
         
         // 创建标题4样式
-        createHeadingStyle(styles, "Heading4", 4, 16, "000000", "宋体");
+        createHeadingStyle(styles, "Heading4", 4, 16, "000000", "仿宋");
         
         // 创建标题5样式
-        createHeadingStyle(styles, "Heading5", 5, 14, "000000", "宋体");
+        createHeadingStyle(styles, "Heading5", 5, 14, "000000", "仿宋");
         
         // 创建标题6样式
-        createHeadingStyle(styles, "Heading6", 6, 12, "000000", "宋体");
+        createHeadingStyle(styles, "Heading6", 6, 12, "000000", "仿宋");
     }
 
     /**
@@ -426,7 +486,7 @@ public class DynamicWordDocumentCreator {
 
 
     /**
-     * 设置默认段落样式 - 小四号宋体，1.5倍行距，首行缩进2字符
+     * 设置默认段落样式 - 小四号仿宋，1.5倍行距，首行缩进2字符
      * @param paragraph 段落对象
      */
     private static void setDefaultParagraphStyle(XWPFParagraph paragraph) {
@@ -492,14 +552,14 @@ public class DynamicWordDocumentCreator {
                 
                 // 更新标题编号
                 headerNumbering.enterLevel(level);
-                String headerNumber = headerNumbering.getNumber();
+                String headerNumber = headerNumbering.getNumber(level);
                 
                 XWPFParagraph headerParagraph = document.createParagraph();
                 setHeaderStyle(headerParagraph, level);
                 XWPFRun headerRun = headerParagraph.createRun();
-                headerRun.setText(headerNumber + " " + title);
+                headerRun.setText(headerNumber + title);
                 headerRun.setBold(true);
-                headerRun.setFontFamily("宋体");
+                headerRun.setFontFamily("仿宋");
                 
                 // 根据标题级别设置字体大小
                 int fontSize = 16; // 默认H3
@@ -571,7 +631,7 @@ public class DynamicWordDocumentCreator {
                 XWPFRun chartTitleRun = chartTitleParagraph.createRun();
                 chartTitleRun.setText("图表 " + chartIndex + "：");
                 chartTitleRun.setBold(true);
-                chartTitleRun.setFontFamily("宋体");
+                chartTitleRun.setFontFamily("仿宋");
 
                 // 创建实际的图表对象
                 try {
@@ -619,15 +679,7 @@ public class DynamicWordDocumentCreator {
                 }
                 i--; // 回退一行，因为循环会自动增加i
 
-                // 创建表格占位符
-                XWPFParagraph tableTitleParagraph = document.createParagraph();
-                tableTitleParagraph.setAlignment(ParagraphAlignment.CENTER); // 设置居中对齐
-                setDefaultParagraphStyle(tableTitleParagraph); // 表格标题使用默认段落样式
-                XWPFRun tableTitleRun = tableTitleParagraph.createRun();
-                tableTitleRun.setText("表格 " + tableIndex + "：");
-                tableTitleRun.setBold(true);
-                tableTitleRun.setFontFamily("宋体");
-
+                // 创建表格占位符（不添加表格标题）
                 XWPFParagraph tableParagraph = document.createParagraph();
                 tableParagraph.setAlignment(ParagraphAlignment.CENTER); // 设置居中对齐
                 setDefaultParagraphStyle(tableParagraph);
