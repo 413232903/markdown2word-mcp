@@ -381,14 +381,14 @@ public class DynamicWordDocumentCreator {
     private static void createHeaderStyles(XWPFDocument document) {
         XWPFStyles styles = document.createStyles();
         
-        // 创建标题1样式
-        createHeadingStyle(styles, "Heading1", 1, 22, "000000", "仿宋");
+        // 创建标题1样式（三号字体）
+        createHeadingStyle(styles, "Heading1", 1, 16, "000000", "仿宋");
         
-        // 创建标题2样式
-        createHeadingStyle(styles, "Heading2", 2, 20, "000000", "仿宋");
+        // 创建标题2样式（三号字体）
+        createHeadingStyle(styles, "Heading2", 2, 16, "000000", "仿宋");
         
-        // 创建标题3样式
-        createHeadingStyle(styles, "Heading3", 3, 18, "000000", "仿宋");
+        // 创建标题3样式（三号字体）
+        createHeadingStyle(styles, "Heading3", 3, 16, "000000", "仿宋");
         
         // 创建标题4样式
         createHeadingStyle(styles, "Heading4", 4, 16, "000000", "仿宋");
@@ -562,11 +562,11 @@ public class DynamicWordDocumentCreator {
                 headerRun.setFontFamily("仿宋");
                 
                 // 根据标题级别设置字体大小
-                int fontSize = 16; // 默认H3
+                int fontSize = 16; // 默认H3（三号字体）
                 switch (level) {
-                    case 1: fontSize = 22; break; // H1
-                    case 2: fontSize = 20; break; // H2
-                    case 3: fontSize = 18; break; // H3
+                    case 1: fontSize = 16; break; // H1（三号字体）
+                    case 2: fontSize = 16; break; // H2（三号字体）
+                    case 3: fontSize = 16; break; // H3（三号字体）
                     case 4: fontSize = 16; break; // H4
                     case 5: fontSize = 14; break; // H5
                     case 6: fontSize = 12; break; // H6

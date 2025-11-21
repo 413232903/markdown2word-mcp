@@ -50,24 +50,25 @@ def format_number_with_thousands_separator(text: str) -> str:
 
 
 def format_table_number(text: str) -> str:
-    """格式化表格中的数字，添加千分符号并去掉小数位
+    """格式化表格中的数字，添加千分符号并保留1位小数
     
-    例如：1000.5 -> 1,001，1234.56 -> 1,235，1000 -> 1,000
+    例如：1000.5 -> 1,000.5，1234.56 -> 1,234.6，1000 -> 1,000.0
     
     Args:
         text: 输入文本
         
     Returns:
-        格式化后的文本（小数四舍五入为整数）
+        格式化后的文本（保留1位小数）
     """
     def replace_number(match):
         number_str = match.group(0)
         try:
-            # 转换为浮点数，然后四舍五入为整数
+            # 转换为浮点数
             num = float(number_str)
-            rounded_num = round(num)
-            # 格式化为带千分符号的整数
-            return format(int(rounded_num), ',')
+            # 保留1位小数，四舍五入
+            # 使用格式字符串，确保显示1位小数
+            formatted_num = f"{num:,.1f}"
+            return formatted_num
         except ValueError:
             # 如果转换失败，返回原字符串
             return number_str

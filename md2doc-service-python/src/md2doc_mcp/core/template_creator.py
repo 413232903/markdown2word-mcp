@@ -197,9 +197,9 @@ class DynamicWordDocumentCreator:
         
         # 创建标题1-6样式
         heading_configs = [
-            ("Heading1", 1, 22),
-            ("Heading2", 2, 20),
-            ("Heading3", 3, 18),
+            ("Heading1", 1, 16),  # 一级标题：三号字体
+            ("Heading2", 2, 16),  # 二级标题：三号字体
+            ("Heading3", 3, 16),  # 三级标题：三号字体
             ("Heading4", 4, 16),
             ("Heading5", 5, 14),
             ("Heading6", 6, 12),
@@ -311,9 +311,9 @@ class DynamicWordDocumentCreator:
                 header_run.bold = True
                 header_run.font.name = '仿宋'
 
-                # 根据标题级别设置字体大小（标准公文字号）
-                # H1: 二号(22pt), H2: 三号(16pt), H3: 四号(14pt), H4: 小四(12pt), H5-H6: 五号(10.5pt)
-                font_sizes = {1: 22, 2: 16, 3: 14, 4: 12, 5: 10.5, 6: 10.5}
+                # 根据标题级别设置字体大小
+                # H1-H3: 三号(16pt), H4: 小四(12pt), H5-H6: 五号(10.5pt)
+                font_sizes = {1: 16, 2: 16, 3: 16, 4: 12, 5: 10.5, 6: 10.5}
                 header_run.font.size = Pt(font_sizes.get(level, 12))
                 
                 i += 1
