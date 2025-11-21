@@ -97,10 +97,13 @@ class HeaderNumbering:
         Args:
             level: 标题级别 (1-6)
         """
-        # 如果当前级别小于上一个级别（遇到更高级的标题），重置当前级别及更深级别的计数器
-        # 这样可以确保小标题在每个父级标题下重新开始编号
+        # 一级和二级标题需要连续编号，不受重置逻辑影响
+        # 三级及以下标题在每个父级标题下重新开始编号
         if level < self.last_level:
-            for i in range(level, 7):
+            # 如果当前级别小于上一个级别（遇到更高级的标题）
+            # 一级和二级标题不重置，只重置三级及以下的计数器
+            reset_start = max(level, 3)  # 至少从三级开始重置
+            for i in range(reset_start, 7):
                 self.level_counters[i] = 0
         elif level > self.last_level:
             # 如果当前级别更深，只重置更深级别的计数器
