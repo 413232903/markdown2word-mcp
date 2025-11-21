@@ -47,14 +47,21 @@ public class DynamicWordDocumentCreator {
         private int lastLevel = 0; // 记录上一个标题的级别
         
         public void enterLevel(int level) {
-            // 一级和二级标题需要连续编号，不受重置逻辑影响
+            // 一级和二级标题需要连续编号，永远不重置
             // 三级及以下标题在每个父级标题下重新开始编号
             if (level < lastLevel) {
                 // 如果当前级别小于上一个级别（遇到更高级的标题）
-                // 一级和二级标题不重置，只重置三级及以下的计数器
-                int resetStart = Math.max(level, 3); // 至少从三级开始重置
-                for (int i = resetStart; i <= 6; i++) {
-                    levelCounters.put(i, 0);
+                // 一级和二级标题永远不重置，只重置三级及以下的计数器
+                if (level <= 2) {
+                    // 如果当前是一级或二级标题，只重置三级及以下的计数器
+                    for (int i = 3; i <= 6; i++) {
+                        levelCounters.put(i, 0);
+                    }
+                } else {
+                    // 如果当前是三级及以下标题，重置当前级别及更深级别的计数器
+                    for (int i = level; i <= 6; i++) {
+                        levelCounters.put(i, 0);
+                    }
                 }
             } else if (level > lastLevel) {
                 // 如果当前级别更深，只重置更深级别的计数器
