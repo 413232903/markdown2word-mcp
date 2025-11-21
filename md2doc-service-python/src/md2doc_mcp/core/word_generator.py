@@ -281,13 +281,13 @@ class PoiWordGenerator:
                 sz.set(qn('w:val'), '22')  # 11pt (11号字体)
                 rPr.append(sz)
                 r.append(rPr)
-                
+
                 t = OxmlElement('w:t')
-                # 格式化表格数字，添加千分符号并去掉小数位
-                t.text = format_table_number(cell_data)
+                # 格式化表格数字，保留1位小数（表头不格式化）
+                t.text = format_table_number(cell_data) if i > 0 else cell_data
                 r.append(t)
                 p.append(r)
-                
+
                 tc.append(p)
                 tr.append(tc)
             
@@ -576,8 +576,8 @@ class PoiWordGenerator:
                 r.append(rPr)
 
                 t = OxmlElement('w:t')
-                # 格式化表格数字，添加千分符号并去掉小数位
-                t.text = format_table_number(cell_data)
+                # 格式化表格数字，保留1位小数（表头不格式化）
+                t.text = format_table_number(cell_data) if i > 0 else cell_data
                 r.append(t)
                 p.append(r)
 
