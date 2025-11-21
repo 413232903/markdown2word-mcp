@@ -205,9 +205,7 @@ public class PoiWordGenerator {
                     cellParagraph.setSpacingBefore(0);
 
                     XWPFRun cellRun = cellParagraph.createRun();
-                    // 格式化数字，保留1位小数（表头不格式化）
-                    String cellText = (i == 0) ? rowData.get(j) : formatTableNumber(rowData.get(j));
-                    cellRun.setText(cellText);
+                    cellRun.setText(rowData.get(j));
                     cellRun.setFontFamily("仿宋");
                     cellRun.setFontSize(11); // 统一使用11号字体
                     if (i == 0) {

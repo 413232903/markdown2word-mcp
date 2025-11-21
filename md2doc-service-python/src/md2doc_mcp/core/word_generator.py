@@ -283,8 +283,7 @@ class PoiWordGenerator:
                 r.append(rPr)
 
                 t = OxmlElement('w:t')
-                # 格式化表格数字，保留1位小数（表头不格式化）
-                t.text = format_table_number(cell_data) if i > 0 else cell_data
+                t.text = cell_data
                 r.append(t)
                 p.append(r)
 
@@ -576,8 +575,7 @@ class PoiWordGenerator:
                 r.append(rPr)
 
                 t = OxmlElement('w:t')
-                # 格式化表格数字，保留1位小数（表头不格式化）
-                t.text = format_table_number(cell_data) if i > 0 else cell_data
+                t.text = cell_data
                 r.append(t)
                 p.append(r)
 
