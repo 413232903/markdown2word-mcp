@@ -44,12 +44,22 @@ public class DynamicWordDocumentCreator {
     private static class HeaderNumbering {
         private final Stack<Integer> numberStack = new Stack<>();
         private final Map<Integer, Integer> levelCounters = new HashMap<>();
+        private int lastLevel = 0; // 记录上一个标题的级别
         
         public void enterLevel(int level) {
-            // 重置更深级别的计数器
-            for (int i = level + 1; i <= 6; i++) {
-                levelCounters.put(i, 0);
+            // 如果当前级别小于上一个级别（遇到更高级的标题），重置当前级别及更深级别的计数器
+            // 这样可以确保小标题在每个父级标题下重新开始编号
+            if (level < lastLevel) {
+                for (int i = level; i <= 6; i++) {
+                    levelCounters.put(i, 0);
+                }
+            } else if (level > lastLevel) {
+                // 如果当前级别更深，只重置更深级别的计数器
+                for (int i = level + 1; i <= 6; i++) {
+                    levelCounters.put(i, 0);
+                }
             }
+            // 如果level == lastLevel，说明是同级标题，不重置，继续累加
             
             // 增加当前级别的计数器
             levelCounters.put(level, levelCounters.getOrDefault(level, 0) + 1);
@@ -59,6 +69,9 @@ public class DynamicWordDocumentCreator {
                 numberStack.pop();
             }
             numberStack.push(levelCounters.get(level));
+            
+            // 更新上一个级别
+            lastLevel = level;
         }
         
         /**

@@ -13,12 +13,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.List;
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @ClassName PoiWordGenerator
@@ -275,40 +270,5 @@ public class PoiWordGenerator {
 
     private static XDDFNumericalDataSource<Number> fromNumber(ChartColumn<Number> column) {
         return XDDFDataSourcesFactory.fromArray(column.toArray(new Number[0]));
-    }
-
-    /**
-     * 格式化表格中的数字，保留1位小数并添加千分符号
-     * 例如：1000.56 -> 1,000.6，1234.789 -> 1,234.8
-     * 
-     * @param text 输入文本
-     * @return 格式化后的文本
-     */
-    private static String formatTableNumber(String text) {
-        if (text == null || text.isEmpty()) {
-            return text;
-        }
-        
-        // 匹配数字的正则表达式（包括整数和小数）
-        Pattern pattern = Pattern.compile("\\d+(\\.\\d+)?");
-        Matcher matcher = pattern.matcher(text);
-        StringBuffer result = new StringBuffer();
-        
-        // 创建数字格式化器，保留1位小数，使用千分符号
-        DecimalFormat df = new DecimalFormat("#,##0.0", DecimalFormatSymbols.getInstance(Locale.US));
-        
-        while (matcher.find()) {
-            try {
-                double num = Double.parseDouble(matcher.group());
-                String formatted = df.format(num);
-                matcher.appendReplacement(result, formatted);
-            } catch (NumberFormatException e) {
-                // 如果解析失败，保持原文本
-                matcher.appendReplacement(result, matcher.group());
-            }
-        }
-        matcher.appendTail(result);
-        
-        return result.toString();
     }
 }

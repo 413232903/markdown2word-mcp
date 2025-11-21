@@ -84,11 +84,12 @@ class HeaderNumbering:
     - 二级标题：1、2、3、...（阿拉伯数字）
     - 三级标题：1）、2）、3）、...（阿拉伯数字+右括号）
     
-    编号逻辑：每个级别在父级别下独立编号
+    编号逻辑：小标题在每个父级标题下重新开始编号，不连续编号
     """
     
     def __init__(self):
         self.level_counters = {}  # 存储每个级别的计数器
+        self.last_level = 0  # 记录上一个标题的级别
     
     def enter_level(self, level: int) -> None:
         """进入指定级别的标题
@@ -96,12 +97,22 @@ class HeaderNumbering:
         Args:
             level: 标题级别 (1-6)
         """
-        # 重置更深级别的计数器（当进入新的一级标题时，下级标题计数器重置）
-        for i in range(level + 1, 7):
-            self.level_counters[i] = 0
+        # 如果当前级别小于上一个级别（遇到更高级的标题），重置当前级别及更深级别的计数器
+        # 这样可以确保小标题在每个父级标题下重新开始编号
+        if level < self.last_level:
+            for i in range(level, 7):
+                self.level_counters[i] = 0
+        elif level > self.last_level:
+            # 如果当前级别更深，只重置更深级别的计数器
+            for i in range(level + 1, 7):
+                self.level_counters[i] = 0
+        # 如果level == self.last_level，说明是同级标题，不重置，继续累加
         
         # 增加当前级别的计数器
         self.level_counters[level] = self.level_counters.get(level, 0) + 1
+        
+        # 更新上一个级别
+        self.last_level = level
     
     def get_number(self, level: int) -> str:
         """获取当前编号，根据级别返回不同格式
