@@ -130,8 +130,14 @@ public class DynamicWordDocumentCreator {
             } else if (level == 3) {
                 // 三级标题：使用阿拉伯数字+右括号，如 "1）"
                 return num + "）";
+            } else if (level == 5) {
+                // 五级标题：使用阿拉伯数字+右括号，如 "1）"，在每个父级标题下重新开始编号
+                return num + "）";
+            } else if (level == 6) {
+                // 六级标题：使用阿拉伯数字+右括号，如 "1）"，在每个父级标题下重新开始编号
+                return num + "）";
             } else {
-                // 四级及以下：使用点号分隔的层级编号，如 "1.1.1"
+                // 四级：使用点号分隔的层级编号，如 "1.1.1"
                 StringBuilder sb = new StringBuilder();
                 for (int i = 1; i <= level; i++) {
                     if (levelCounters.containsKey(i) && levelCounters.get(i) > 0) {

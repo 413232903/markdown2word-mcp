@@ -145,8 +145,16 @@ class HeaderNumbering:
             # 三级标题：使用阿拉伯数字+右括号，如 "1）"
             num = self.level_counters.get(3, 0)
             return str(num) + "）" if num > 0 else ""
+        elif level == 5:
+            # 五级标题：使用阿拉伯数字+右括号，如 "1）"，在每个父级标题下重新开始编号
+            num = self.level_counters.get(5, 0)
+            return str(num) + "）" if num > 0 else ""
+        elif level == 6:
+            # 六级标题：使用阿拉伯数字+右括号，如 "1）"，在每个父级标题下重新开始编号
+            num = self.level_counters.get(6, 0)
+            return str(num) + "）" if num > 0 else ""
         else:
-            # 四级及以下：使用点号分隔的层级编号，如 "1.1.1"
+            # 四级：使用点号分隔的层级编号，如 "1.1.1"
             parts = []
             for i in range(1, level + 1):
                 if i in self.level_counters and self.level_counters[i] > 0:
