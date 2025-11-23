@@ -50,23 +50,30 @@ public class DynamicWordDocumentCreator {
             // 一级标题需要连续编号，永远不重置
             // 二级标题在每个一级标题下重新开始编号
             // 三级及以下标题在每个父级标题下重新开始编号
+            
             if (level < lastLevel) {
                 // 如果当前级别小于上一个级别（遇到更高级的标题）
-                // 需要重置比当前级别更深的计数器（子标题），但当前级别本身应该继续累加
-                // 例如：H3 -> H2，应该重置H3-H6，但H2应该继续累加
-                for (int i = level + 1; i <= 6; i++) {
-                    levelCounters.put(i, 0);
+                // 需要重置当前级别及其子级别的计数器，使其在新的父级标题下重新开始编号
+                // 例如：H3 -> H2，应该重置H2-H6的计数器，使H2在新的H1下重新开始编号
+                for (int i = level; i <= 6; i++) {
+                    // 一级标题永远不重置（跳过level=1）
+                    if (i > 1) {
+                        levelCounters.put(i, 0);
+                    }
                 }
+                // 重置后，当前级别应该从1开始编号
+                levelCounters.put(level, 1);
             } else if (level > lastLevel) {
                 // 如果当前级别更深，只重置更深级别的计数器
                 for (int i = level + 1; i <= 6; i++) {
                     levelCounters.put(i, 0);
                 }
+                // 当前级别应该从1开始编号（在新的父级标题下）
+                levelCounters.put(level, 1);
+            } else {
+                // 如果level == lastLevel，说明是同级标题，继续累加
+                levelCounters.put(level, levelCounters.getOrDefault(level, 0) + 1);
             }
-            // 如果level == lastLevel，说明是同级标题，不重置，继续累加
-            
-            // 增加当前级别的计数器
-            levelCounters.put(level, levelCounters.getOrDefault(level, 0) + 1);
             
             // 更新栈
             while (numberStack.size() >= level) {
