@@ -44,50 +44,65 @@ public class DynamicWordDocumentCreator {
     private static class HeaderNumbering {
         private final Stack<Integer> numberStack = new Stack<>();
         private final Map<Integer, Integer> levelCounters = new HashMap<>();
-        private final Map<Integer, Integer> parentLevels = new HashMap<>(); // 记录每个级别的父级标题编号
+        private final Map<String, Integer> parentLevels = new HashMap<>(); // 记录每个级别的父级标题编号（键格式："level_parentLevel"）
         private int lastLevel = 0; // 记录上一个标题的级别
         
         public void enterLevel(int level) {
             // 一级标题需要连续编号，永远不重置
             // 二级标题在每个一级标题下重新开始编号，但同级需要连续编号
             // 三级及以下标题在每个父级标题下重新开始编号，但同级需要连续编号
-            
+
             if (level < lastLevel) {
                 // 如果当前级别小于上一个级别（从子标题跳回父级标题）
                 // 需要判断是否遇到了新的更高层级标题
-                // 如果父级标题编号没有变化，说明还在同一个父级标题下，应该继续累加
-                // 如果父级标题编号变化了，说明遇到了新的更高层级标题，需要重置
-                
-                // 检查是否遇到了新的更高层级标题
-                int parentLevel = level - 1;
-                int currentParentNumber = (parentLevel > 0) ? levelCounters.getOrDefault(parentLevel, 0) : 0;
-                Integer lastParentNumber = parentLevels.get(level);  // 使用Integer包装类，null表示未记录过
-                
-                // 只有当之前记录过父级编号且父级编号发生变化时，才认为是遇到了新的更高层级标题
-                if (parentLevel > 0 && lastParentNumber != null && currentParentNumber != lastParentNumber) {
+                // 检查当前级别的所有父级（1到level-1）的编号是否发生变化
+
+                boolean parentLevelChanged = false;
+                if (level > 1) {
+                    for (int parentLevel = 1; parentLevel < level; parentLevel++) {
+                        int currentParentNumber = levelCounters.getOrDefault(parentLevel, 0);
+                        Integer lastParentNumber = parentLevels.get(level + "_" + parentLevel);
+
+                        if (lastParentNumber != null && currentParentNumber != lastParentNumber) {
+                            parentLevelChanged = true;
+                            break;
+                        }
+                    }
+                } else {
+                    // level == 1，检查所有更深层级（2-6）的父级记录
+                    // 如果 H1 的编号变化了，所有更深层级都应该重置
+                    int currentH1Number = levelCounters.getOrDefault(1, 0);
+                    for (int deeperLevel = 2; deeperLevel <= 6; deeperLevel++) {
+                        Integer lastH1Number = parentLevels.get(deeperLevel + "_1");
+                        if (lastH1Number != null && currentH1Number != lastH1Number) {
+                            // H1 编号变化了，标记所有更深层级需要重置
+                            // 这里我们不需要立即重置，因为当进入那些层级时会检查
+                            break;
+                        }
+                    }
+                }
+
+                if (level > 1 && parentLevelChanged) {
                     // 遇到了新的更高层级标题，需要重置当前级别及其子级别的计数器
                     for (int i = level; i <= 6; i++) {
-                        // 一级标题永远不重置（跳过level=1）
-                        if (i > 1) {
-                            levelCounters.put(i, 0);
-                        }
+                        levelCounters.put(i, 0);
                     }
                     // 重置后，当前级别应该从1开始编号
                     levelCounters.put(level, 1);
                 } else {
                     // 还在同一个父级标题下，同级标题应该继续累加
-                    // 如果之前没有记录过，说明是第一次遇到这个级别，也应该累加
                     levelCounters.put(level, levelCounters.getOrDefault(level, 0) + 1);
                 }
-                
+
                 // 重置更深级别的计数器
                 for (int i = level + 1; i <= 6; i++) {
                     levelCounters.put(i, 0);
                 }
-                
-                // 更新父级标题编号记录
-                if (parentLevel > 0) {
-                    parentLevels.put(level, currentParentNumber);
+
+                // 更新父级标题编号记录（记录所有父级）
+                for (int parentLevel = 1; parentLevel < level; parentLevel++) {
+                    int currentParentNumber = levelCounters.getOrDefault(parentLevel, 0);
+                    parentLevels.put(level + "_" + parentLevel, currentParentNumber);
                 }
             } else if (level > lastLevel) {
                 // 如果当前级别更深，只重置更深级别的计数器
@@ -96,23 +111,23 @@ public class DynamicWordDocumentCreator {
                 }
                 // 当前级别应该从1开始编号（在新的父级标题下）
                 levelCounters.put(level, 1);
-                
-                // 记录父级标题编号
-                int parentLevel = level - 1;
-                if (parentLevel > 0) {
-                    parentLevels.put(level, levelCounters.getOrDefault(parentLevel, 0));
+
+                // 记录所有父级标题编号（包括level=0作为H1的虚拟父级）
+                for (int parentLevel = 0; parentLevel < level; parentLevel++) {
+                    int currentParentNumber = (parentLevel == 0) ? 0 : levelCounters.getOrDefault(parentLevel, 0);
+                    parentLevels.put(level + "_" + parentLevel, currentParentNumber);
                 }
             } else {
                 // 如果level == lastLevel，说明是同级标题，继续累加
                 levelCounters.put(level, levelCounters.getOrDefault(level, 0) + 1);
             }
-            
+
             // 更新栈
             while (numberStack.size() >= level) {
                 numberStack.pop();
             }
             numberStack.push(levelCounters.get(level));
-            
+
             // 更新上一个级别
             lastLevel = level;
         }

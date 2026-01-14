@@ -78,78 +78,88 @@ def number_to_chinese(num: int) -> str:
 
 class HeaderNumbering:
     """标题编号管理器
-    
+
     支持多级标题编号：
     - 一级标题：一、二、三、...（中文数字）
     - 二级标题：1、2、3、...（阿拉伯数字）
     - 三级标题：1）、2）、3）、...（阿拉伯数字+右括号）
-    
+
     编号逻辑：同级标题需要连续编号，子标题在每个父级标题下重新开始编号
     """
-    
+
     def __init__(self):
         self.level_counters = {}  # 存储每个级别的计数器
         self.last_level = 0  # 记录上一个标题的级别
-        self.parent_levels = {}  # 记录每个级别的父级标题编号，用于判断是否遇到新的父级标题
-    
+        self.parent_levels = {}  # 记录每个级别的父级标题编号（键格式："level_parentLevel"）
+
     def enter_level(self, level: int) -> None:
         """进入指定级别的标题
-        
+
         Args:
             level: 标题级别 (1-6)
         """
         # 一级标题需要连续编号，永远不重置
         # 二级标题在每个一级标题下重新开始编号，但同级需要连续编号
         # 三级及以下标题在每个父级标题下重新开始编号，但同级需要连续编号
-        
+
         if level < self.last_level:
             # 如果当前级别小于上一个级别（从子标题跳回父级标题）
             # 需要判断是否遇到了新的更高层级标题
-            # 如果父级标题编号没有变化，说明还在同一个父级标题下，应该继续累加
-            # 如果父级标题编号变化了，说明遇到了新的更高层级标题，需要重置
-            
-            # 检查是否遇到了新的更高层级标题
-            # 通过检查当前级别的父级标题编号是否变化来判断
-            parent_level = level - 1
-            current_parent_number = self.level_counters.get(parent_level, 0) if parent_level > 0 else 0
-            last_parent_number = self.parent_levels.get(level, None)  # 使用None表示未记录过
-            
-            # 只有当之前记录过父级编号且父级编号发生变化时，才认为是遇到了新的更高层级标题
-            if parent_level > 0 and last_parent_number is not None and current_parent_number != last_parent_number:
+            # 检查当前级别的所有父级（1到level-1）的编号是否发生变化
+
+            parent_level_changed = False
+            if level > 1:
+                for parent_level in range(1, level):
+                    current_parent_number = self.level_counters.get(parent_level, 0)
+                    last_parent_number = self.parent_levels.get(f"{level}_{parent_level}")
+
+                    if last_parent_number is not None and current_parent_number != last_parent_number:
+                        parent_level_changed = True
+                        break
+            else:
+                # level == 1，检查所有更深层级（2-6）的父级记录
+                # 如果 H1 的编号变化了，所有更深层级都应该重置
+                current_h1_number = self.level_counters.get(1, 0)
+                for deeper_level in range(2, 7):
+                    last_h1_number = self.parent_levels.get(f"{deeper_level}_1")
+                    if last_h1_number is not None and current_h1_number != last_h1_number:
+                        # H1 编号变化了，标记所有更深层级需要重置
+                        # 这里我们不需要立即重置，因为当进入那些层级时会检查
+                        break
+
+            if level > 1 and parent_level_changed:
                 # 遇到了新的更高层级标题，需要重置当前级别及其子级别的计数器
                 for i in range(level, 7):
-                    # 一级标题永远不重置（跳过level=1）
-                    if i > 1:
-                        self.level_counters[i] = 0
+                    self.level_counters[i] = 0
                 # 重置后，当前级别应该从1开始编号
                 self.level_counters[level] = 1
             else:
                 # 还在同一个父级标题下，同级标题应该继续累加
-                # 如果之前没有记录过，说明是第一次遇到这个级别，也应该累加
                 self.level_counters[level] = self.level_counters.get(level, 0) + 1
-            
+
             # 重置更深级别的计数器
             for i in range(level + 1, 7):
                 self.level_counters[i] = 0
-            
-            # 更新父级标题编号记录
-            if parent_level > 0:
-                self.parent_levels[level] = current_parent_number
+
+            # 更新父级标题编号记录（记录所有父级）
+            for parent_level in range(1, level):
+                current_parent_number = self.level_counters.get(parent_level, 0)
+                self.parent_levels[f"{level}_{parent_level}"] = current_parent_number
         elif level > self.last_level:
             # 如果当前级别更深，只重置更深级别的计数器
             for i in range(level + 1, 7):
                 self.level_counters[i] = 0
             # 当前级别应该从1开始编号（在新的父级标题下）
             self.level_counters[level] = 1
-            
-            # 记录父级标题编号
-            parent_level = level - 1
-            if parent_level > 0:
-                self.parent_levels[level] = self.level_counters.get(parent_level, 0)
+
+            # 记录所有父级标题编号（包括level=0作为H1的虚拟父级）
+            for parent_level in range(0, level):
+                current_parent_number = 0 if parent_level == 0 else self.level_counters.get(parent_level, 0)
+                self.parent_levels[f"{level}_{parent_level}"] = current_parent_number
         else:
             # 如果level == lastLevel，说明是同级标题，继续累加
             self.level_counters[level] = self.level_counters.get(level, 0) + 1
-        
+
         # 更新上一个级别
         self.last_level = level
     
