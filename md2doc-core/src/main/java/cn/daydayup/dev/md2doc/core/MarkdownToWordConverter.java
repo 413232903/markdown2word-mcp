@@ -201,9 +201,11 @@ public class MarkdownToWordConverter {
      * @param markdownContent Markdown内容
      */
     private void processTextContent(WordParams params, String markdownContent) {
-        // 生成文档标题：当前年月 + "数据分析报告"
+        // 生成文档标题：上个月的年月 + "分析报告"
         java.time.LocalDate now = java.time.LocalDate.now();
-        String title = now.getYear() + "年" + now.getMonthValue() + "月数据分析报告";
+        // 计算上个月
+        java.time.LocalDate lastMonth = now.minusMonths(1);
+        String title = lastMonth.getYear() + "年" + lastMonth.getMonthValue() + "月分析报告";
         params.setText("title", title);
 
         // 可以添加更多文本处理逻辑
