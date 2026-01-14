@@ -255,7 +255,8 @@ public class DynamicWordDocumentCreator {
         CTAbstractNum ctAbstractNum = CTAbstractNum.Factory.newInstance();
         ctAbstractNum.setAbstractNumId(abstractNumId);
 
-        String[] bullets = new String[]{"•", "◦", "▪"};
+        // 统一使用圆点作为正文级别的项目符号
+        String[] bullets = new String[]{"•", "•", "•"};
         for (int i = 0; i < bullets.length; i++) {
             CTLvl level = ctAbstractNum.addNewLvl();
             level.setIlvl(BigInteger.valueOf(i));
