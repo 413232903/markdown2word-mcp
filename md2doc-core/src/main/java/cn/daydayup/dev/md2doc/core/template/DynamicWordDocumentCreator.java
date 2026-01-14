@@ -673,7 +673,7 @@ public class DynamicWordDocumentCreator {
                 continue;
             }
 
-            // 检查是否为有序列表
+            // 检查是否为有序列表 - 统一改为圆点符号避免跨层级连续编号
             Matcher orderedMatcher = ORDERED_LIST_PATTERN.matcher(line);
             if (orderedMatcher.matches()) {
                 String indent = orderedMatcher.group(1);
@@ -684,7 +684,8 @@ public class DynamicWordDocumentCreator {
                 clearFirstLineIndent(listParagraph);
 
                 int level = calculateListLevel(indent);
-                BigInteger numId = getOrCreateOrderedNumId(document, numberingCache);
+                // 统一使用圆点符号，避免跨层级连续编号问题
+                BigInteger numId = getOrCreateBulletNumId(document, numberingCache);
                 listParagraph.setNumID(numId);
                 listParagraph.setNumILvl(BigInteger.valueOf(level));
 
