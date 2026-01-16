@@ -25,9 +25,13 @@ public class MarkdownController {
 
     @Autowired
     private MarkdownConversionService markdownConversionService;
-    
+
     // 用于存储临时文件的目录
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir") + "/md2doc/";
+
+    // 下载基础 URL（可通过环境变量 MD2DOC_DOWNLOAD_BASE_URL 覆盖）
+    @org.springframework.beans.factory.annotation.Value("${md2doc.download-base-url:}")
+    private String downloadBaseUrl;
 
     /**
      * 将上传的Markdown文件转换为Word文档
@@ -60,9 +64,9 @@ public class MarkdownController {
             // 删除临时的Markdown文件
             Files.deleteIfExists(tempFilePath);
             
-            // 构造文件访问URL
-            String fileUrl = "/api/markdown/files/" + fileName + ".docx";
-            
+            // 构造文件访问URL（支持公网 URL）
+            String fileUrl = buildDownloadUrl(fileName + ".docx");
+
             // 构造响应
             Map<String, String> response = new HashMap<>();
             response.put("fileUrl", fileUrl);
@@ -103,9 +107,9 @@ public class MarkdownController {
             // 删除临时的Markdown文件
             Files.deleteIfExists(tempFilePath);
             
-            // 构造文件访问URL
-            String fileUrl = "/api/markdown/files/" + fileName + ".docx";
-            
+            // 构造文件访问URL（支持公网 URL）
+            String fileUrl = buildDownloadUrl(fileName + ".docx");
+
             // 构造响应
             Map<String, String> response = new HashMap<>();
             response.put("fileUrl", fileUrl);
@@ -156,6 +160,21 @@ public class MarkdownController {
 
         public void setContent(String content) {
             this.content = content;
+        }
+    }
+
+    /**
+     * 构建文件下载URL
+     * 如果配置了 download-base-url，返回完整URL；否则返回相对路径
+     */
+    private String buildDownloadUrl(String fileName) {
+        if (downloadBaseUrl != null && !downloadBaseUrl.isEmpty()) {
+            String normalizedBaseUrl = downloadBaseUrl.endsWith("/")
+                ? downloadBaseUrl.substring(0, downloadBaseUrl.length() - 1)
+                : downloadBaseUrl;
+            return normalizedBaseUrl + "/api/markdown/files/" + fileName;
+        } else {
+            return "/api/markdown/files/" + fileName;
         }
     }
 }
