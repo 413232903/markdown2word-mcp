@@ -9,14 +9,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        // REST API 路径
-        registry.addMapping("/api/**")
-                .allowedOrigins("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(false);
-
-        // MCP SSE 端点路径 - 必须支持 CORS 以便公网访问
+        // MCP SSE 端点路径和所有 API 路径 - 必须支持 CORS 以便公网访问
         registry.addMapping("/dataReport/**")
                 .allowedOrigins("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")

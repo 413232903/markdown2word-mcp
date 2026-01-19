@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/markdown")
+@RequestMapping("/dataReport/md2doc/api/markdown")
 @CrossOrigin(origins = "*")
 public class MarkdownController {
 

@@ -194,11 +194,12 @@ public class Md2docMcpTools {
 
     /**
      * 构建文件下载URL
+     * 统一使用 /dataReport/md2doc/api/markdown/files/ 路径
      */
     private String buildDownloadUrl(String fileName) {
         String normalizedBaseUrl = downloadBaseUrl.endsWith("/")
             ? downloadBaseUrl.substring(0, downloadBaseUrl.length() - 1)
             : downloadBaseUrl;
-        return normalizedBaseUrl + "/api/markdown/files/" + fileName;
+        return normalizedBaseUrl + "/dataReport/md2doc/api/markdown/files/" + fileName;
     }
 }

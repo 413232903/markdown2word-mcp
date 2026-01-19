@@ -1,5 +1,12 @@
 server:
   port: 8080
+  # SSE 连接保持配置
+  tomcat:
+    threads:
+      max: 200
+    connection-timeout: -1  # 无限超时（SSE 需要）
+    keep-alive-timeout: 86400000  # 24 小时
+    max-keep-alive-requests: 1000
 
 spring:
   application:
@@ -24,6 +31,13 @@ spring:
             enabled: true
           sse:
             enabled: true
+
+        # SSE 连接配置
+        sse:
+          # 保持连接活跃
+          keep-alive: true
+          # 心跳间隔（毫秒）
+          heartbeat-interval: 15000
 
 # md2doc 配置
 md2doc:
