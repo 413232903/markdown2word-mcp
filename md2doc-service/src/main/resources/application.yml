@@ -43,6 +43,7 @@ spring:
 # md2doc 配置
 md2doc:
   # 下载基础URL，用于生成文件访问链接（可通过环境变量 MD2DOC_DOWNLOAD_BASE_URL 覆盖）
+  # 默认使用内网地址，部署时通过环境变量设置为公网地址
   download-base-url: ${MD2DOC_DOWNLOAD_BASE_URL:http://192.9.253.106:8080}
   # 临时文件保留天数（默认10天）
   temp-file-retention-days: 10
