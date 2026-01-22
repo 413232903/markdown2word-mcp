@@ -165,16 +165,16 @@ public class MarkdownController {
 
     /**
      * 构建文件下载URL
-     * 如果配置了 download-base-url，返回完整URL；否则返回相对路径
+     * 统一使用 /dataReport/md2doc/api/markdown/files/ 路径
      */
     private String buildDownloadUrl(String fileName) {
         if (downloadBaseUrl != null && !downloadBaseUrl.isEmpty()) {
             String normalizedBaseUrl = downloadBaseUrl.endsWith("/")
                 ? downloadBaseUrl.substring(0, downloadBaseUrl.length() - 1)
                 : downloadBaseUrl;
-            return normalizedBaseUrl + "/api/markdown/files/" + fileName;
+            return normalizedBaseUrl + "/dataReport/md2doc/api/markdown/files/" + fileName;
         } else {
-            return "/api/markdown/files/" + fileName;
+            return "/dataReport/md2doc/api/markdown/files/" + fileName;
         }
     }
 }

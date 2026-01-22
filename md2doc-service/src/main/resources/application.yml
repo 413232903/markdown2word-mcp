@@ -23,7 +23,8 @@ spring:
 
         # SSE 端点配置
         sse-endpoint: /dataReport/md2doc
-        sse-message-endpoint: /dataReport/mcp/message
+        # message 端点需要在 SSE 端点下
+        sse-message-endpoint: /dataReport/md2doc/mcp/message
 
         # 启用传输协议
         transport:
